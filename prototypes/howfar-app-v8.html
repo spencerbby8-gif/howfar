@@ -1,0 +1,1306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>how far</title>
+<style>
+/* ================================================================
+   how far — v8 · the check-in app (replan A, 2 Oct 2026)
+   UI: 100% ReplyMate kit — every component below is from the repo:
+     colors.xml · themes.xml · activity_home/conversation/settings/voice
+     Ui.java (row/toggleRow/label/divider/primaryBtn/ghostBtn/field)
+     btn_primary · btn_ghost · bg_field · bg_card · bubbles · splash
+   Product: check in on the people you actually miss.
+     tap = bare ping · hold = 15s voice · release = sent, it waits ·
+     one how-far at a time · answers, not likes · history sinks into
+     strata you dig through · no feed, no followers, no receipts.
+   The ONLY non-ReplyMate visual: the how far logo.
+   ================================================================ */
+:root{
+  --bg:#0D1117; --card:#161B22; --accent:#0A84FF; --text:#FFFFFF; --dim:#AAB2BD;
+  --red:#FF6B6B; --green:#3FB950; --field:#11161D; --stroke:#2A3139;
+  --bin:#1C2330; --bout:#1E3250;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%; margin:0;}
+body{background:#000; font-family:Roboto,"Helvetica Neue",-apple-system,"Segoe UI",Arial,sans-serif;
+  color:var(--text); font-size:14px; overflow:hidden;}
+#frame{max-width:480px; height:100dvh; margin:0 auto; background:var(--bg);
+  position:relative; overflow:hidden; display:flex; flex-direction:column;}
+
+/* status bar */
+#statusbar{flex:none; height:30px; display:flex; justify-content:space-between; align-items:center;
+  padding:0 16px; font-size:12px; color:rgba(255,255,255,.85); background:var(--bg);}
+#statusbar .sicons{display:flex; align-items:center; gap:6px;}
+.sig{display:flex; align-items:flex-end; gap:1.5px; height:11px;}
+.sig i{width:2.5px; background:rgba(255,255,255,.85); border-radius:.5px;}
+.sig i:nth-child(1){height:4px;} .sig i:nth-child(2){height:6.5px;} .sig i:nth-child(3){height:9px;} .sig i:nth-child(4){height:11px;}
+.batt{width:20px; height:10px; border:1px solid rgba(255,255,255,.6); border-radius:2.5px; position:relative;}
+.batt::after{content:""; position:absolute; inset:1.5px 6px 1.5px 1.5px; background:rgba(255,255,255,.85);}
+
+/* screens = activities, single stack, no tabs */
+#screens{flex:1; position:relative; overflow:hidden; background:var(--bg);}
+.screen{position:absolute; inset:0; background:var(--bg); display:none; flex-direction:column;}
+.screen.active{display:flex;}
+.screen.slide{animation:act_in .19s ease-out;}
+@keyframes act_in{from{opacity:.3; transform:translateX(26px);} to{opacity:1; transform:none;}}
+.scroll{flex:1; overflow-y:auto; min-height:0;}
+.scroll::-webkit-scrollbar{width:0;}
+
+/* ---- ReplyMate kit ---- */
+.p20{padding:20px;}
+.h1{font-size:24px; font-weight:700; margin:0;}
+.h1.backlink{cursor:pointer; display:inline-block;}
+.sub{font-size:12px; color:var(--dim); margin:2px 0 0;}
+.statusline{font-size:12px; color:var(--accent); margin-top:10px; cursor:default;}
+.statusline.ok{color:var(--green);} .statusline.warn{color:#F0B450; cursor:pointer;}
+.privacyline{font-size:11px; color:var(--dim); margin-top:6px;}
+.btn{display:block; width:100%; background:#3E4448; border:none; color:var(--text);
+  font-family:inherit; font-size:14px; font-weight:500; text-transform:uppercase; letter-spacing:.03em;
+  padding:13px 16px; border-radius:2px; cursor:pointer; margin-top:16px;}
+.btn:active{background:#33393d;}
+.btn.sm{margin-top:0; padding:12px 14px; font-size:13px; width:auto;}
+.btn-primary{display:block; width:100%; background:var(--accent); border:none; color:#fff;
+  font-family:inherit; font-size:16px; font-weight:700; min-height:52px; border-radius:14px;
+  cursor:pointer; margin-top:14px; position:relative; overflow:hidden; user-select:none; touch-action:none;}
+.btn-primary:active{background:#0871d8;}
+.btn-primary .lbl{position:relative; z-index:2;}
+.btn-primary .hfill{position:absolute; inset:0; background:#0871d8; transform-origin:left; transform:scaleX(0); z-index:1;}
+.btn-primary.sunk{background:var(--green);}
+.btn-ghost{display:block; width:100%; background:transparent; border:1px solid #3DFFFFFF; color:var(--text);
+  font-family:inherit; font-size:16px; min-height:52px; border-radius:14px; cursor:pointer; margin-top:8px;
+  position:relative; overflow:hidden; user-select:none; touch-action:none;}
+.btn-ghost:active{background:rgba(255,255,255,.05);}
+.btn-ghost .hfill{position:absolute; inset:0; background:rgba(255,255,255,.07); transform-origin:left; transform:scaleX(0);}
+.btn-ghost .lbl{position:relative; z-index:2;}
+.row{display:flex; align-items:center; padding:14px 0; cursor:pointer;}
+.row .c{flex:1; min-width:0;}
+.row .t{font-size:16px;}
+.row .s{font-size:13px; color:var(--dim); margin-top:2px;}
+.row .chev{font-size:22px; color:var(--dim); font-weight:400; flex:none; margin-left:8px;}
+.divider{height:1px; background:var(--stroke);}
+.label{font-size:12px; color:var(--dim); padding:12px 0 4px;}
+.trow{display:flex; align-items:center; padding:10px 4px 10px 0; cursor:pointer;}
+.trow .c{flex:1; min-width:0;}
+.trow .t{font-size:16px;}
+.trow .s{font-size:13px; color:var(--dim); margin-top:2px;}
+.sw{flex:none; width:38px; height:20px; border-radius:20px; background:#3a4046; position:relative;
+  margin-left:12px; transition:background .15s;}
+.sw::after{content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
+  background:#fff; transition:left .15s;}
+.sw.on{background:var(--accent);}
+.sw.on::after{left:20px;}
+.card{background:var(--card); border-radius:12px; padding:14px;}
+
+/* logo — the one brand element */
+.logo{display:inline-block; vertical-align:middle;}
+.logo .ldot{transform-box:fill-box; transform-origin:center; animation:ldot 2.4s ease-in-out infinite;}
+@keyframes ldot{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+
+/* splash */
+#scr-splash{align-items:center; justify-content:center; text-align:center;}
+.splash-wrap{position:relative; width:170px; height:170px; display:flex; align-items:center; justify-content:center;}
+.splash-glow{position:absolute; inset:-45px; border-radius:50%;
+  background:radial-gradient(circle, rgba(10,132,255,.22) 0%, rgba(10,132,255,.1) 45%, rgba(10,132,255,0) 72%);}
+.splash-ring{position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(10,132,255,.4);}
+#scr-splash .h1{margin-top:20px;}
+
+/* ---- home = the circle (activity_home anatomy) ---- */
+.home-head{display:flex; align-items:center;}
+.home-head .tt{flex:1; min-width:0;}
+.home-head .tt .nm{display:flex; align-items:center; gap:9px;}
+.gear{font-size:24px; color:var(--dim); padding:8px; cursor:pointer; background:none; border:none; font-family:inherit;}
+.holdnote{font-size:11px; color:var(--dim); text-align:center; margin-top:6px;}
+#circle-list .row:first-child{padding-top:8px;}
+
+/* ---- a person = shared history in strata (conversation anatomy) ---- */
+.conv-head{display:flex; align-items:center; padding:16px;}
+.conv-back{font-size:28px; color:var(--accent); padding:0 12px 0 4px; cursor:pointer; flex:none; line-height:1;}
+.conv-tt{flex:1; min-width:0;}
+.conv-name{font-size:18px; font-weight:700;}
+.conv-rel{font-size:12px; color:var(--dim); margin-top:1px;}
+.conv-act{font-size:14px; color:var(--accent); padding:8px; cursor:pointer; flex:none; background:none; border:none; font-family:inherit;}
+#msg-scroll{padding:0 16px;}
+.msg-list{display:flex; flex-direction:column; padding-bottom:10px;}
+.bandhead{font-size:12px; color:var(--dim); letter-spacing:.08em; text-transform:uppercase; margin:18px 0 2px;}
+.bandhead:first-child{margin-top:6px;}
+.band.new{animation:bandin .4s ease both;}
+@keyframes bandin{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;}}
+.bubble{max-width:80%; border-radius:14px; padding:10px 12px; margin-top:8px; cursor:pointer;}
+.bubble.in{background:var(--bin); align-self:flex-start;}
+.bubble.out{background:var(--bout); align-self:flex-end; margin-left:48px;}
+.bubble .chip{font-size:11px; font-weight:700; margin-bottom:4px; color:var(--accent);}
+.bubble .chip.done{color:var(--green);}
+.bubble .chip.dim{color:var(--dim); font-weight:400;}
+.brow{display:flex; align-items:center; gap:9px;}
+.ptext{font-size:15px; line-height:1.35;}
+.pbtn{width:28px; height:28px; border-radius:50%; background:var(--accent); border:none; color:#fff;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; font-size:11px; padding:0;}
+.pbtn:active{background:#0871d8;}
+.bars{display:flex; align-items:center; gap:2px; height:18px; flex:1;}
+.bars i{width:2px; border-radius:1px; background:var(--dim); height:6px;}
+.bubble.out .bars i{background:#B9CCE4;}
+.bars.live i{animation:bdance 1s ease-in-out infinite;}
+@keyframes bdance{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
+.bdur{font-size:13px; flex:none;}
+.bmeta{font-size:11px; color:var(--dim); margin-top:5px;}
+.firststate{text-align:center; padding:36px 12px; color:var(--dim); font-size:14px;}
+/* dig boundary */
+.digzone{margin-top:18px;}
+.digzone .btn-ghost{margin-top:0;}
+.digzone .dl{display:block; font-size:15px; font-weight:700;}
+.digzone .dl small{display:block; font-size:11px; color:var(--dim); font-weight:400; margin-top:2px;}
+/* bedrock = the floor of a friendship */
+.bedrock{margin-top:22px; text-align:center; padding-bottom:8px;}
+.bedrock .stmt{font-size:18px; font-weight:700; line-height:1.4;}
+.bedrock .floor{font-size:11px; color:var(--dim); margin-top:6px;}
+.bedrock .anniv{font-size:12px; color:var(--dim); margin-top:12px;}
+.bubble.bedrocked{opacity:.55;}
+/* composer — one how-far at a time */
+.composer{background:var(--card); padding:12px; border-top:1px solid var(--stroke);}
+.composer .btn-primary{margin-top:0;}
+.notstanding{padding:12px 16px 2px; font-size:12px; color:var(--accent);}
+.skiplink{display:block; padding:0 16px 12px; font-size:11px; color:var(--dim); font-style:italic;
+  background:none; border:none; font-family:inherit; cursor:pointer; text-align:left; width:100%;}
+
+/* ---- check-in (activity_voice anatomy: ‹ title + card + primary) ---- */
+.rec-status{font-size:12px; color:var(--green); margin-top:10px;}
+.parentnote{font-size:11px; color:var(--dim); margin-top:4px;}
+.dropzone{margin-top:16px; cursor:pointer; user-select:none; touch-action:none;}
+.dropzone .label{padding-top:0;}
+.rec-timer{font-size:15px; margin-top:6px;}
+.rec-bars{display:flex; align-items:center; gap:2.5px; height:24px; margin-top:10px;}
+.rec-bars i{width:3px; border-radius:2px; background:var(--accent); height:8px;}
+.rec-bars.live i{animation:bdance 1s ease-in-out infinite;}
+.dropzone .btn-primary{margin-top:14px;}
+.drop-note{font-size:11px; color:var(--dim); margin-top:10px; line-height:1.5;}
+.drop-note.sunk{color:var(--green);}
+
+/* ---- around (live counts) ---- */
+.livenum{text-align:center; padding:22px 0 4px;}
+.livenum .n{font-size:64px; font-weight:700; line-height:1;}
+.livenum p{margin:8px 0 0; font-size:12px; color:var(--dim);}
+.livenum .priv{display:inline-block; margin-top:10px; font-size:11px; color:var(--dim);
+  border:1px solid var(--stroke); border-radius:99px; padding:4px 11px;}
+.tickhead{display:flex; align-items:center; gap:10px; margin:16px 0 2px; padding:0 2px;}
+.tickhead .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); animation:ldot 2s ease-in-out infinite;}
+.tickhead span{font-size:12px; color:var(--dim);}
+.tickhead .line{flex:1; height:1px; background:var(--stroke);}
+.tick{display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--stroke);}
+.tick .ttxt{flex:1; font-size:13px;}
+.tick .ttxt.old{color:var(--dim);}
+.tick .ttime{font-size:11px; color:var(--dim); flex:none;}
+
+/* ---- my circle ---- */
+.statrow{display:flex; gap:9px; margin-top:14px;}
+.stat{flex:1; text-align:center; padding:13px 6px 11px; background:var(--card); border-radius:12px;}
+.stat b{display:block; font-size:22px; font-weight:700;}
+.stat span{display:block; font-size:12px; color:var(--dim); margin-top:3px;}
+.nofollow{font-size:11px; color:var(--dim); text-align:center; padding:16px 0 4px;}
+
+/* toast + dialog */
+#toast{position:absolute; left:50%; bottom:72px; transform:translateX(-50%) translateY(8px);
+  background:#22272e; color:#fff; font-size:13px; padding:10px 18px; border-radius:22px;
+  opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; z-index:60; white-space:nowrap; max-width:92%;}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+#overlay{position:absolute; inset:0; background:rgba(0,0,0,.6); display:none; z-index:50;
+  align-items:center; justify-content:center; padding:28px;}
+#overlay.show{display:flex;}
+.dialog{background:#1a1f26; border-radius:4px; padding:18px 16px 10px; width:100%; max-width:340px;
+  max-height:80%; overflow-y:auto;}
+.dialog .dtitle{font-size:18px; font-weight:700; margin-bottom:8px;}
+.pick{padding:10px 0; cursor:pointer;}
+.pick .ph{font-size:16px;}
+.pick.cur .ph{color:var(--accent); font-weight:700;}
+.pick .pd{font-size:13px; color:var(--dim); margin-top:2px;}
+.dlg-close{width:auto; margin:10px 0 4px; align-self:flex-end; padding:8px 16px;}
+</style>
+</head>
+<body>
+<div id="frame">
+
+  <div id="statusbar">
+    <span id="clock">18:20</span>
+    <span class="sicons">
+      <span class="sig"><i></i><i></i><i></i><i></i></span>
+      <span style="font-size:10px;">5G</span>
+      <span class="batt"></span>
+    </span>
+  </div>
+
+  <div id="screens">
+
+    <!-- 00 SPLASH -->
+    <section class="screen active" id="scr-splash">
+      <div class="splash-wrap">
+        <div class="splash-glow"></div>
+        <div class="splash-ring"></div>
+        <svg class="logo" width="86" height="77" viewBox="0 0 112 100" aria-label="how far">
+          <g transform="translate(8,-7)">
+            <circle cx="40" cy="58" r="24" fill="none" stroke="#C6FF3D" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+            <circle cx="88" cy="24" r="11" fill="#C6FF3D"/>
+          </g>
+          <circle cx="40" cy="58" r="24" fill="none" stroke="#FF4A1C" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+          <circle class="ldot" cx="88" cy="24" r="11" fill="#FF4A1C"/>
+        </svg>
+      </div>
+      <h1 class="h1">how far</h1>
+      <p class="sub">for the people you miss</p>
+    </section>
+
+    <!-- 01 THE CIRCLE (home) -->
+    <section class="screen" id="scr-circle">
+      <div class="scroll">
+        <div class="p20" style="padding-bottom:0;">
+          <div class="home-head">
+            <div class="tt">
+              <div class="nm">
+                <svg class="logo" width="24" height="21" viewBox="0 0 112 100" aria-hidden="true">
+                  <g transform="translate(8,-7)"><circle cx="40" cy="58" r="24" fill="none" stroke="#C6FF3D" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/><circle cx="88" cy="24" r="11" fill="#C6FF3D"/></g>
+                  <circle cx="40" cy="58" r="24" fill="none" stroke="#FF4A1C" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+                  <circle cx="88" cy="24" r="11" fill="#FF4A1C"/>
+                </svg>
+                <span class="h1">how far</span>
+              </div>
+              <p class="sub">check in on your people · it waits</p>
+            </div>
+            <button class="gear" id="gear-btn" aria-label="settings">⚙</button>
+          </div>
+
+          <div class="statusline ok" id="me-status">● you're around — your circle can reach you</div>
+          <div class="statusline ok" id="around-line" style="cursor:pointer;">● 3 of 6 around</div>
+          <div class="privacyline">no feed · no followers · no read receipts · no last seen — it waits</div>
+
+          <div class="label" style="margin-top:18px;">your circle</div>
+          <div id="circle-list"></div>
+          <p class="privacyline" style="margin-top:10px;">small on purpose. a circle is full at twelve.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 A PERSON = shared history in strata -->
+    <section class="screen" id="scr-person">
+      <div class="conv-head">
+        <span class="conv-back" id="person-back">‹</span>
+        <div class="conv-tt">
+          <div class="conv-name" id="person-name">amara</div>
+          <div class="conv-rel" id="person-rel">how far back: 2 years</div>
+        </div>
+        <button class="conv-act" id="person-around">Around</button>
+        <button class="conv-act" id="person-info">Info</button>
+      </div>
+      <div class="scroll" id="msg-scroll">
+        <div class="msg-list" id="msg-list"></div>
+      </div>
+      <div id="composer-zone"></div>
+    </section>
+
+    <!-- 03 CHECK-IN (say how far) -->
+    <section class="screen" id="scr-checkin">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="checkin-back">‹ </span>say how far</h1>
+          <p class="sub" style="font-size:13px;">a voice, to one person — no retakes</p>
+          <div class="rec-status" id="checkin-status">● speaking to amara</div>
+          <div class="parentnote" id="checkin-parent" style="display:none;">↳ an answer</div>
+
+          <div class="card dropzone" id="checkin-zone">
+            <div class="label">Recording</div>
+            <div class="rec-timer" id="checkin-timer">0:00 / 0:15</div>
+            <div class="rec-bars" id="checkin-bars">
+              <i style="height:8px"></i><i style="height:16px"></i><i style="height:11px"></i>
+              <i style="height:20px"></i><i style="height:13px"></i><i style="height:18px"></i>
+              <i style="height:9px"></i><i style="height:15px"></i><i style="height:10px"></i>
+            </div>
+            <div class="btn-primary" id="checkin-pill" style="margin-top:14px;">
+              <span class="lbl" id="checkin-pill-lbl">hold to speak</span>
+              <span class="hfill" id="checkin-pill-fill"></span>
+            </div>
+            <div class="drop-note" id="checkin-note">let go and it sends. it waits for whenever they're ready.<br>no retakes — it's a moment, not a message</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 AROUND (live counts) -->
+    <section class="screen" id="scr-around">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="around-back">‹ </span>around now</h1>
+          <p class="sub" style="font-size:13px;">the circle, breathing — not broadcasting</p>
+          <div class="livenum">
+            <div class="n" id="around-n">3</div>
+            <p id="around-sub">of your 6 · around now</p>
+            <span class="priv">a count, never a location</span>
+          </div>
+          <div class="tickhead"><span class="dot"></span><span>the circle, ticking</span><span class="line"></span></div>
+          <div id="around-ticker"></div>
+          <p class="privacyline" style="margin-top:14px;">deliberately not live: who's where, read receipts, last seen, typing — ever</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="screen" id="scr-settings">
+      <div class="scroll">
+        <div class="p20" id="settings-root">
+          <h1 class="h1"><span class="h1 backlink" id="set-back">‹ </span>Settings</h1>
+
+          <div class="label">Account</div>
+          <div class="row" data-toast="Profile — coming in the next build">
+            <div class="c"><div class="t">My profile</div><div class="s">name, avatar — nothing public</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" data-toast="Account — coming in the next build">
+            <div class="c"><div class="t">Account</div><div class="s">your number · sync across devices</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">My circle</div>
+          <div class="row" id="circle-row">
+            <div class="c"><div class="t">How far you've gone</div><div class="s" id="circle-sub">—</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="deepest-row">
+            <div class="c"><div class="t">Deepest history</div><div class="s" id="deepest-sub">amara · 2 years back</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">Quiet</div>
+          <div class="trow" id="ghost-trow">
+            <div class="c"><div class="t">Ghost mode</div><div class="s">miss nothing, be missed quietly</div></div>
+            <span class="sw" id="ghost-sw"></span>
+          </div>
+          <div class="trow" id="push-trow">
+            <div class="c"><div class="t">Answer pushes</div><div class="s">answers only — the only push there is</div></div>
+            <span class="sw on" id="push-sw"></span>
+          </div>
+          <div class="trow" id="anniv-trow">
+            <div class="c"><div class="t">Anniversaries</div><div class="s">when the ground remembers for you</div></div>
+            <span class="sw on" id="anniv-sw"></span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="keep-row">
+            <div class="c"><div class="t">Keep history</div><div class="s" id="keep-sub">forever — it's yours, on this phone</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="notif-row">
+            <div class="c"><div class="t">Notifications</div><div class="s">answers + anniversaries, nothing else</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="data-row">
+            <div class="c"><div class="t">Data &amp; storage</div><div class="s">check-ins stay on this device</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">About</div>
+          <div class="row" id="about-row">
+            <div class="c"><div class="t">About</div><div class="s">how far 2.0 · for the people you miss</div></div><span class="chev">›</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 HOW FAR YOU'VE GONE (my circle) -->
+    <section class="screen" id="scr-mycircle">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="mc-back">‹ </span>how far you've gone</h1>
+          <p class="sub" style="font-size:13px;">between you and each of them</p>
+          <div class="statrow" id="mc-stats"></div>
+          <div id="mc-list" style="margin-top:8px;"></div>
+          <div class="nofollow">no follower counts. not for anyone, not anywhere, ever.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="overlay"><div class="dialog" id="dialog"></div></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* =============== data =============== */
+  /* band = depth of the friendship, DERIVED from age. 0 today · 1 this week
+     2 this month · 3 earlier · 4 last year · 5 way back · 6 bedrock (the floor).
+     0–2 load on open; 3+ sit behind the dig boundary. */
+  var BANDS = [
+    { label:'today' }, { label:'this week · 1–7 d' }, { label:'this month · 7–30 d' },
+    { label:'earlier · 1–6 mo' }, { label:'last year · 6–18 mo' }, { label:'way back · 18 mo +' },
+    { label:'bedrock · 2 y +' }
+  ];
+  var FREE_BANDS = 3;
+  var DAY = 1440;
+
+  function band(ago){ /* ago in minutes */
+    if (ago < DAY) return 0;
+    if (ago < 7 * DAY) return 1;
+    if (ago < 30 * DAY) return 2;
+    if (ago < 180 * DAY) return 3;
+    if (ago < 540 * DAY) return 4;
+    if (ago < 730 * DAY) return 5;
+    return 6;
+  }
+
+  var PEOPLE = [
+    { id:'amara', name:'amara', around:true, responsive:false, span:'2 years',
+      bedrock:{ stmt:'Two years back.<br>Forty-one check-ins.',
+                anniv:'◈ one year ago, she talked you through the night' },
+      items:[
+        { dir:'in',  type:'ping',  ago:12,          meta:'12 minutes ago' },
+        { dir:'in',  type:'voice', dur:11, ago:120,       meta:'2 hours ago', chip:'an answer' },
+        { dir:'out', type:'voice', dur:15, ago:180,       meta:'3 hours ago · she answered', answered:true },
+        { dir:'out', type:'ping',  ago:26*60,            meta:'yesterday · she answered', answered:true },
+        { dir:'in',  type:'voice', dur:9,  ago:27*60,     meta:'yesterday', chip:'an answer' },
+        { dir:'in',  type:'voice', dur:14, ago:5*24*60,   meta:'friday night' },
+        { dir:'out', type:'voice', dur:12, ago:6*24*60,   meta:'last week · she answered', answered:true },
+        { dir:'in',  type:'ping',  ago:14*24*60,          meta:'two weeks ago' },
+        { dir:'out', type:'voice', dur:10, ago:20*24*60,  meta:'three weeks ago · she answered', answered:true },
+        { dir:'in',  type:'voice', dur:15, ago:40*24*60,  meta:'five weeks back', found:true },
+        { dir:'out', type:'ping',  ago:45*24*60,          meta:'a month and a half ago', answered:true, found:true },
+        { dir:'in',  type:'voice', dur:10, ago:240*24*60, meta:'last december', found:true },
+        { dir:'out', type:'voice', dur:15, ago:270*24*60, meta:'last november', answered:true, found:true },
+        { dir:'in',  type:'voice', dur:15, ago:745*24*60, meta:'the first one · it goes no further', found:true }
+      ]},
+    { id:'tunde', name:'tunde', around:true, responsive:true, span:'8 months',
+      items:[
+        { dir:'out', type:'voice', dur:15, ago:180,      meta:'3 hours ago · waiting', waiting:true },
+        { dir:'in',  type:'ping',  ago:2*24*60,          meta:'2 days ago' },
+        { dir:'out', type:'voice', dur:12, ago:3*24*60,  meta:'3 days ago · he answered', answered:true },
+        { dir:'in',  type:'voice', dur:9,  ago:4*24*60,  meta:'4 days ago', chip:'an answer' },
+        { dir:'out', type:'ping',  ago:25*24*60,         meta:'25 days ago · he answered', answered:true },
+        { dir:'in',  type:'voice', dur:11, ago:28*24*60, meta:'four weeks ago' },
+        { dir:'out', type:'voice', dur:14, ago:150*24*60, meta:'five months ago', answered:true, found:true }
+      ]},
+    { id:'kelechi', name:'kelechi', around:false, responsive:true, span:'5 months',
+      items:[
+        { dir:'out', type:'ping',  ago:26*60,            meta:'yesterday · he answered', answered:true },
+        { dir:'in',  type:'voice', dur:13, ago:27*60,    meta:'yesterday', chip:'an answer' },
+        { dir:'in',  type:'voice', dur:8,  ago:5*24*60,  meta:'5 days ago' },
+        { dir:'out', type:'voice', dur:12, ago:6*24*60,  meta:'6 days ago · he answered', answered:true },
+        { dir:'in',  type:'ping',  ago:16*24*60,         meta:'two weeks ago' }
+      ]},
+    { id:'ifeoma', name:'ifeoma', around:false, responsive:false, span:'3 weeks',
+      items:[
+        { dir:'in',  type:'voice', dur:13, ago:3*24*60,  meta:'3 days ago' },
+        { dir:'out', type:'ping',  ago:4*24*60,          meta:'4 days ago · she answered', answered:true },
+        { dir:'in',  type:'voice', dur:11, ago:10*24*60, meta:'10 days ago', chip:'an answer' },
+        { dir:'in',  type:'ping',  ago:19*24*60,         meta:'19 days ago' }
+      ]},
+    { id:'chidi', name:'chidi', around:false, responsive:false, span:'1 year',
+      bedrock:{ stmt:'Two years back.<br>Then you drifted — the ground kept it anyway.',
+                anniv:'◈ he was there when it was all falling apart' },
+      items:[
+        { dir:'out', type:'voice', dur:15, ago:240*24*60, meta:'eight months ago · the last time', answered:true, found:true },
+        { dir:'in',  type:'voice', dur:10, ago:243*24*60, meta:'eight months ago', chip:'an answer', found:true },
+        { dir:'out', type:'ping',  ago:250*24*60,         meta:'eight months ago', answered:true, found:true },
+        { dir:'in',  type:'voice', dur:14, ago:300*24*60, meta:'a voice from last year', found:true },
+        { dir:'out', type:'voice', dur:11, ago:310*24*60, meta:'last year', answered:true, found:true },
+        { dir:'in',  type:'voice', dur:12, ago:700*24*60, meta:'from deep in your history', found:true },
+        { dir:'in',  type:'voice', dur:15, ago:760*24*60, meta:'from when it was all falling apart', found:true }
+      ]},
+    { id:'spencer', name:'spencer', around:true, responsive:true, span:'—',
+      items:[] }
+  ];
+
+  var state = {
+    stack:['scr-splash'],
+    person:null,
+    dugMax:{},
+    ghost:false,
+    parent:null,
+    keep:0
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var screens = document.querySelectorAll('.screen');
+
+  function outWaiting(p){
+    return p.items.find(function(it){ return it.dir === 'out' && it.waiting && !it.answered; }) || null;
+  }
+  function inPending(p){
+    return p.items.find(function(it){ return it.dir === 'in'; }) || null; /* newest in, unanswered by chip */
+  }
+  function shortAge(mins){
+    if (mins < 1) return 'now';
+    if (mins < 60) return mins + 'm';
+    if (mins < 48 * 60) return Math.round(mins / 60) + 'h';
+    return Math.round(mins / DAY) + 'd';
+  }
+  function answeredByLink(p, inItem){
+    return p.items.some(function(o){ return o.dir === 'out' && o.answerOf === inItem.id; });
+  }
+
+  /* =============== router =============== */
+  function show(id, push){
+    var el = $(id);
+    if (!el) return;
+    if (push !== false && state.stack[state.stack.length - 1] !== id) state.stack.push(id);
+    for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+    el.classList.add('active');
+    el.classList.remove('slide'); void el.offsetWidth; el.classList.add('slide');
+    /* home is live state — always re-render when visible */
+    if (id === 'scr-circle') renderHome();
+  }
+  function back(){
+    if (state.stack.length > 1) state.stack.pop();
+    show(state.stack[state.stack.length - 1], false);
+  }
+
+  /* =============== toast =============== */
+  var toastTimer = null;
+  function toast(msg){
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2300);
+  }
+
+  /* =============== clock =============== */
+  function tickClock(){
+    var d = new Date();
+    var h = d.getHours(), m = d.getMinutes();
+    $('clock').textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+  tickClock(); setInterval(tickClock, 15000);
+
+  /* =============== splash =============== */
+  var splashTimer = setTimeout(enterApp, 2200);
+  function enterApp(){
+    clearTimeout(splashTimer);
+    if (state.stack[state.stack.length - 1] === 'scr-splash') show('scr-circle', true);
+  }
+  $('scr-splash').addEventListener('click', enterApp);
+
+  /* =============== hold-to-commit (dig) =============== */
+  function makeHold(btnId, fillId, ms, canStart, onCommit, onEarly){
+    var btn = $(btnId), fill = $(fillId);
+    var holding = false, t0 = 0, raf = null, done = false;
+    function step(ts){
+      if (!holding || done) return;
+      var p = Math.min(1, (ts - t0) / ms);
+      if (fill) fill.style.transform = 'scaleX(' + p + ')';
+      if (p >= 1){ done = true; holding = false; onCommit(); setTimeout(reset, 300); return; }
+      raf = requestAnimationFrame(step);
+    }
+    function reset(){
+      if (raf) cancelAnimationFrame(raf);
+      holding = false;
+      if (fill){
+        fill.style.transition = 'transform .3s ease';
+        fill.style.transform = 'scaleX(0)';
+        setTimeout(function(){ fill.style.transition = 'none'; }, 320);
+      }
+    }
+    function begin(e){
+      if (done) return;
+      e.preventDefault();
+      if (canStart && !canStart()){ if (onEarly) onEarly(); return; }
+      holding = true; t0 = performance.now();
+      raf = requestAnimationFrame(step);
+    }
+    function end(){
+      if (!holding) return;
+      if (performance.now() - t0 < ms){ reset(); if (onEarly) onEarly(); }
+    }
+    btn.addEventListener('mousedown', begin);
+    btn.addEventListener('touchstart', begin, {passive:false});
+    btn.addEventListener('mouseup', end);
+    btn.addEventListener('mouseleave', function(){ if (holding) end(); });
+    btn.addEventListener('touchend', end);
+  }
+
+  /* =============== 01 the circle =============== */
+  function renderHome(){
+    var st = $('me-status');
+    if (!state.ghost){
+      st.className = 'statusline ok';
+      st.textContent = '● you\'re around — your circle can reach you';
+    } else {
+      st.className = 'statusline warn';
+      st.textContent = 'ghost — here, but quiet. answers arrive, no pushes';
+    }
+    var around = PEOPLE.filter(function(p){ return p.around; }).length;
+    $('around-line').textContent = '● ' + around + ' of ' + PEOPLE.length + ' around';
+
+    var list = $('circle-list');
+    list.innerHTML = '';
+    PEOPLE.forEach(function(p, i){
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div class="c"><div class="t"></div><div class="s"></div></div><span class="chev">›</span>';
+      row.querySelector('.t').textContent = p.name;
+      var waiting = outWaiting(p);
+      var lastIn = null, lastOut = null;
+      p.items.forEach(function(it){
+        if (it.dir === 'in' && (!lastIn || it.ago < lastIn.ago)) lastIn = it;
+        if (it.dir === 'out' && (!lastOut || it.ago < lastOut.ago)) lastOut = it;
+      });
+      var s;
+      if (waiting){
+        s = 'your how far is waiting · ' + (waiting.sentAt ? 'now' : shortAge(waiting.ago));
+      } else if (lastIn && !lastIn.chip && !answeredByLink(p, lastIn) &&
+                 lastIn.ago < (lastOut ? lastOut.ago : 1e9)){
+        s = '● waiting on you · ' + shortAge(lastIn.ago);
+      } else if (p.items.length){
+        var n = (lastIn && lastIn.ago <= (lastOut ? lastOut.ago : 1e9)) ? lastIn : lastOut;
+        s = 'caught up · ' + shortAge(n.ago) + ' ago';
+      } else {
+        s = 'never — say how far';
+      }
+      row.querySelector('.s').textContent = s;
+      row.addEventListener('click', function(){ openPerson(p); });
+      list.appendChild(row);
+      if (i < PEOPLE.length - 1){
+        var d = document.createElement('div'); d.className = 'divider'; list.appendChild(d);
+      }
+    });
+  }
+  /* an in item "waits on you" until a newer out from you answers it —
+     chips and answerOf links settle that below. */
+
+  $('me-status').addEventListener('click', function(){
+    setGhost(!state.ghost);
+    toast(state.ghost ? 'ghost on — you\'re here, but quiet' : 'you\'re around again');
+  });
+  $('around-line').addEventListener('click', function(){
+    renderAround();
+    show('scr-around');
+  });
+  $('gear-btn').addEventListener('click', function(){ show('scr-settings'); });
+
+  /* =============== 02 a person = history in strata =============== */
+  function fmt(s){ return '0:' + (s < 10 ? '0' : '') + s; }
+  function genBars(n, seed){
+    var html = '';
+    for (var i = 0; i < n; i++){
+      var h = 5 + Math.abs(Math.sin(i * (seed || 1.7) * 3.1)) * 12;
+      html += '<i style="height:' + h.toFixed(0) + 'px; animation-delay:' + ((i % 5) * .12).toFixed(2) + 's"></i>';
+    }
+    return html;
+  }
+  function loadedMax(p){
+    return state.dugMax[p.id] !== undefined ? state.dugMax[p.id] : FREE_BANDS - 1;
+  }
+  function hasDeeper(p, maxLoaded){
+    return p.items.some(function(it){ return band(it.ago) > maxLoaded; });
+  }
+  function renderThread(p, animateFrom){
+    var list = $('msg-list');
+    list.innerHTML = '';
+    if (!p.items.length){
+      var first = document.createElement('div');
+      first.className = 'firststate';
+      first.textContent = 'Nothing between you yet. Say how far.';
+      list.appendChild(first);
+      return;
+    }
+    var max = Math.min(loadedMax(p), BANDS.length - 1);
+    var renderedAny = false;
+    for (var b = 0; b <= max; b++){
+      var vs = p.items.filter(function(it){ return band(it.ago) === b; });
+      if (!vs.length && b < 6) continue;
+      var wrap = document.createElement('div');
+      wrap.className = 'band' + (b === animateFrom ? ' new' : '');
+      if (b === 6){
+        var br = document.createElement('div');
+        br.className = 'bedrock';
+        br.innerHTML = '<div class="stmt">' + (p.bedrock ? p.bedrock.stmt : 'Two years back.<br>It goes no further.') + '</div>' +
+          '<div class="floor">this is the bottom. every friendship has one — on purpose.</div>' +
+          (p.bedrock && p.bedrock.anniv ? '<div class="anniv">' + p.bedrock.anniv + '</div>' : '');
+        wrap.appendChild(br);
+      } else {
+        var head = document.createElement('div');
+        head.className = 'bandhead';
+        head.textContent = BANDS[b].label;
+        wrap.appendChild(head);
+      }
+      vs.forEach(function(it){ wrap.appendChild(bubbleEl(p, it, b === 6)); });
+      list.appendChild(wrap);
+      renderedAny = true;
+    }
+    if (!renderedAny){
+      /* nothing recent — the newest thing between you is behind the dig line */
+      var fr = document.createElement('div');
+      fr.className = 'firststate';
+      var newest = p.items[0];
+      for (var k = 1; k < p.items.length; k++) if (p.items[k].ago < newest.ago) newest = p.items[k];
+      fr.textContent = 'Nothing recent. The last time was ' + newest.meta.replace(' · the last time', '') + '.';
+      list.appendChild(fr);
+    }
+    if (!hasDeeper(p, max)){
+      var floor = document.createElement('div');
+      floor.className = 'bedrock';
+      floor.innerHTML = '<div class="floor" style="margin-top:18px;">nothing deeper between you — yet. every day it gets a little older.</div>';
+      list.appendChild(floor);
+    } else {
+      var dz = document.createElement('div');
+      dz.className = 'digzone';
+      dz.innerHTML = '<button class="btn-ghost" id="digbtn">' +
+        '<span class="lbl"><span class="dl">how far back?<small>hold to dig — older is deeper, and harder to reach</small></span></span>' +
+        '<span class="hfill" id="digbtn-fill"></span></button>';
+      list.appendChild(dz);
+      makeHold('digbtn', 'digbtn-fill', 1100, null, function(){
+        state.dugMax[p.id] = Math.min(loadedMax(p) + 1, 6);
+        renderThread(p, state.dugMax[p.id]);
+        toast('you dug into ' + BANDS[state.dugMax[p.id]].label.split(' ·')[0] + ' — found old check-ins ✓');
+      }, function(){ toast('keep holding — history gives way slowly'); });
+    }
+  }
+  function bubbleEl(p, it, bedrocked){
+    var b = document.createElement('div');
+    b.className = 'bubble ' + it.dir + (bedrocked ? ' bedrocked' : '');
+    b.setAttribute('data-vid', it.id);
+    /* chips: state of the exchange */
+    if (it.dir === 'out'){
+      if (it.answerOf){ chip(b, 'an answer'); }
+      else if (it.waiting && !it.answered){ chip(b, 'it waits', 'dim'); }
+      else if (it.answered){ chip(b, 'answered', 'dim'); }
+    } else if (it.chip === 'an answer'){
+      chip(b, 'an answer');
+    } else if (p.items.some(function(o){ return o.dir === 'out' && o.answerOf === it.id; })){
+      chip(b, '✓ answered', 'done');
+    }
+    if (it.found){
+      var cf = document.createElement('div');
+      cf.className = 'chip';
+      cf.textContent = '◈ echo · from deep in your history';
+      b.appendChild(cf);
+    }
+    if (it.type === 'voice'){
+      var row = document.createElement('div');
+      row.className = 'brow';
+      var btn = document.createElement('button');
+      btn.className = 'pbtn'; btn.textContent = '▶';
+      var bars = document.createElement('span');
+      bars.className = 'bars'; bars.innerHTML = genBars(16, it.dur);
+      var dur = document.createElement('span');
+      dur.className = 'bdur'; dur.textContent = fmt(it.dur);
+      row.appendChild(btn); row.appendChild(bars); row.appendChild(dur);
+      btn.addEventListener('click', function(e){ e.stopPropagation(); playBars(btn, bars, it.dur); });
+      b.appendChild(row);
+    } else {
+      var pt = document.createElement('div');
+      pt.className = 'ptext';
+      pt.textContent = 'how far?';
+      b.appendChild(pt);
+    }
+    var meta = document.createElement('div');
+    meta.className = 'bmeta';
+    meta.textContent = it.meta;
+    b.appendChild(meta);
+    b.addEventListener('click', function(){ itemDialog(p, it); });
+    return b;
+  }
+  function chip(bubble, text, mood){
+    var c = document.createElement('div');
+    c.className = 'chip' + (mood === 'dim' ? ' dim' : mood === 'done' ? ' done' : '');
+    c.textContent = text;
+    bubble.appendChild(c);
+  }
+  function playBars(btn, bars, dur){
+    if (bars.classList.contains('live')) return;
+    bars.classList.add('live');
+    btn.textContent = '❚❚';
+    setTimeout(function(){ bars.classList.remove('live'); btn.textContent = '▶'; }, Math.min(dur, 6) * 1000);
+  }
+  function openPerson(p){
+    state.person = p;
+    $('person-name').textContent = p.name;
+    updateRel();
+    renderThread(p);
+    renderComposer(p);
+    show('scr-person');
+  }
+  function updateRel(){
+    var p = state.person;
+    $('person-rel').textContent = 'how far back: ' + p.span + (p.around ? ' · ● around' : '');
+  }
+  /* composer: one how-far at a time. tap = ping, hold = speak */
+  function renderComposer(p){
+    var zone = $('composer-zone');
+    zone.innerHTML = '';
+    var waiting = outWaiting(p);
+    if (waiting){
+      var ns = document.createElement('div');
+      ns.className = 'notstanding';
+      ns.textContent = 'your how far is still waiting' + (waiting.sentAt ? '' : ' · ' + shortAge(waiting.ago)) +
+        ' — one at a time, no piles';
+      zone.appendChild(ns);
+      var skip = document.createElement('button');
+      skip.className = 'skiplink';
+      skip.textContent = 'prototype · skip the wait';
+      skip.addEventListener('click', function(){ skipWait(p); });
+      zone.appendChild(skip);
+      return;
+    }
+    var card = document.createElement('div');
+    card.className = 'composer';
+    card.innerHTML = '<button class="btn-primary" id="person-send"><span class="lbl">say how far</span>' +
+      '<span class="hfill" id="person-send-fill"></span></button>' +
+      '<div class="holdnote">tap to ping · hold to speak — 15 seconds, no retakes</div>';
+    zone.appendChild(card);
+    wireSend(p);
+  }
+  function wireSend(p){
+    var btn = $('person-send'), fill = $('person-send-fill');
+    var holding = false, t0 = 0, raf = null, committed = false;
+    function step(ts){
+      if (!holding || committed) return;
+      var prog = Math.min(1, (ts - t0) / 1000);
+      if (fill) fill.style.transform = 'scaleX(' + prog + ')';
+      if (prog >= 1){
+        committed = true; holding = false;
+        resetFill();
+        openCheckin(p, topPendingIn(p));
+      } else {
+        raf = requestAnimationFrame(step);
+      }
+    }
+    function resetFill(){
+      if (raf) cancelAnimationFrame(raf);
+      if (fill){
+        fill.style.transition = 'transform .3s ease';
+        fill.style.transform = 'scaleX(0)';
+        setTimeout(function(){ fill.style.transition = 'none'; }, 320);
+      }
+    }
+    function begin(e){
+      if (committed) return;
+      e.preventDefault();
+      btn.dataset.held = '1';
+      holding = true; t0 = performance.now();
+      raf = requestAnimationFrame(step);
+    }
+    function end(){
+      if (!holding || committed) return;
+      holding = false;
+      if (raf) cancelAnimationFrame(raf);
+      resetFill();
+      /* under a second of holding = a tap = a bare ping */
+      if (performance.now() - t0 < 1000) sendPing(p);
+    }
+    btn.addEventListener('mousedown', begin);
+    btn.addEventListener('touchstart', begin, {passive:false});
+    btn.addEventListener('mouseup', end);
+    btn.addEventListener('mouseleave', function(){ if (holding && !committed){ holding = false; if (raf) cancelAnimationFrame(raf); resetFill(); } });
+    btn.addEventListener('touchend', end);
+    btn.addEventListener('click', function(){
+      if (btn.dataset.held){ delete btn.dataset.held; return; } /* gesture already handled */
+      sendPing(p); /* keyboard / a11y path */
+    });
+  }
+  function topPendingIn(p){
+    /* newest incoming that you haven't answered yet */
+    var pending = p.items.filter(function(it){
+      return it.dir === 'in' && !p.items.some(function(o){ return o.dir === 'out' && o.answerOf === it.id; });
+    });
+    if (!pending.length) return null;
+    pending.sort(function(a, b){ return a.ago - b.ago; });
+    return pending[0];
+  }
+  function sendPing(p){
+    if (outWaiting(p)){ toast('one at a time — your how far is still waiting'); return; }
+    var it = { dir:'out', type:'ping', ago:0, meta:'just now', waiting:true, sentAt:Date.now() };
+    it.id = p.id + '-n' + (p.items.length + 1);
+    p.items.unshift(it);
+    renderThread(p, 0);
+    renderComposer(p);
+    $('msg-scroll').scrollTop = 0;
+    toast('ping sent — it waits with ' + p.name + '. no words needed');
+  }
+  function skipWait(p){
+    var waiting = outWaiting(p);
+    if (!waiting) return;
+    if (!p.responsive){
+      toast(p.name + ' answers when ' + (p.name === 'ifeoma' ? 'she' : 'he') + ' answers — that\'s kind of the point');
+      return;
+    }
+    simAnswer(p, waiting);
+  }
+  $('person-back').addEventListener('click', back);
+  $('person-around').addEventListener('click', function(){
+    renderAround();
+    show('scr-around');
+  });
+  $('person-info').addEventListener('click', function(){
+    var p = state.person;
+    var outs = p.items.filter(function(i){ return i.dir === 'out'; }).length;
+    openDialog(p.name, [
+      { name:'Check-ins', desc:outs + ' from you · ' + (p.items.length - outs) + ' from ' + (p.id === 'ifeoma' || p.id === 'amara' ? 'her' : 'him') },
+      { name:'How far back', desc:p.span === '—' ? 'you two haven\'t started yet' : p.span + ' of history, sinking all the time' },
+      { name:'Around', desc:(p.around ? 'around now' : 'quiet right now') + ' — a count, never a location' },
+      { name:'You', desc:'no read receipts · no last seen · it waits' }
+    ]);
+  });
+
+  /* item dialog — answers, not likes */
+  function itemDialog(p, it){
+    var title = it.type === 'voice'
+      ? 'a voice · ' + fmt(it.dur) + (it.dir === 'out' ? ' · yours' : '')
+      : 'a ping' + (it.dir === 'out' ? ' · yours' : '');
+    openDialog(title, [
+      { name:'▶ Play', desc:it.type === 'voice' ? it.meta : 'a ping carries no words — that\'s the point' },
+      { name:'↳ Answer', desc:'your voice, in reply — they get the only push' },
+      { name:'Cancel', desc:'' }
+    ], function(name){
+      if (name === '▶ Play'){
+        if (it.type === 'voice'){
+          var el = document.querySelector('[data-vid="' + it.id + '"]');
+          if (el) playBars(el.querySelector('.pbtn'), el.querySelector('.bars'), it.dur);
+        } else {
+          toast('a ping carries no words — that\'s the point');
+        }
+      } else if (name === '↳ Answer'){
+        if (outWaiting(p)){
+          toast('one at a time — your how far is still waiting');
+        } else {
+          openCheckin(p, it);
+        }
+      }
+    });
+  }
+
+  /* =============== 03 check-in — hold, release = sent =============== */
+  var SEND_MAX = 15;
+  var ckinT0 = 0, ckinHolding = false, ckinRaf = null, ckinDone = false;
+  var ckinPerson = null, ckinParent = null;
+
+  function openCheckin(p, parent){
+    ckinPerson = p; ckinParent = parent || null;
+    ckinDone = false; ckinHolding = false;
+    $('checkin-status').textContent = '● speaking to ' + p.name;
+    var pn = $('checkin-parent');
+    if (ckinParent){
+      pn.style.display = 'block';
+      pn.textContent = '↳ an answer to ' + p.name + (ckinParent.type === 'voice' ? '\'s voice' : '\'s ping');
+    } else {
+      pn.style.display = 'none';
+    }
+    $('checkin-timer').textContent = '0:00 / 0:15';
+    $('checkin-bars').classList.remove('live');
+    $('checkin-pill').classList.remove('sunk');
+    $('checkin-pill-lbl').textContent = 'hold to speak';
+    $('checkin-pill-fill').style.transform = 'scaleX(0)';
+    var note = $('checkin-note');
+    note.classList.remove('sunk');
+    note.innerHTML = 'let go and it sends. it waits for whenever they\'re ready.<br>no retakes — it\'s a moment, not a message';
+    show('scr-checkin');
+  }
+  function ckinStep(ts){
+    if (!ckinHolding || ckinDone) return;
+    var held = (ts - ckinT0) / 1000;
+    var prog = Math.min(1, held / SEND_MAX);
+    $('checkin-pill-fill').style.transform = 'scaleX(' + prog + ')';
+    $('checkin-timer').textContent = fmt(Math.min(SEND_MAX, Math.round(held))) + ' / 0:15';
+    if (prog >= 1){ send(Math.round(SEND_MAX)); return; }
+    ckinRaf = requestAnimationFrame(ckinStep);
+  }
+  function ckinBegin(e){
+    if (ckinDone) return;
+    e.preventDefault();
+    ckinHolding = true; ckinT0 = performance.now();
+    $('checkin-bars').classList.add('live');
+    ckinRaf = requestAnimationFrame(ckinStep);
+  }
+  function ckinEnd(){
+    if (!ckinHolding || ckinDone) return;
+    ckinHolding = false;
+    if (ckinRaf) cancelAnimationFrame(ckinRaf);
+    $('checkin-bars').classList.remove('live');
+    var held = (performance.now() - ckinT0) / 1000;
+    if (held < 1){
+      /* mistouch guard — under a second sends nothing */
+      $('checkin-pill-fill').style.transition = 'transform .3s ease';
+      $('checkin-pill-fill').style.transform = 'scaleX(0)';
+      setTimeout(function(){ $('checkin-pill-fill').style.transition = 'none'; }, 320);
+      $('checkin-timer').textContent = '0:00 / 0:15';
+      toast('too quick — nothing sent');
+    } else {
+      send(Math.max(1, Math.round(held)));
+    }
+  }
+  $('checkin-zone').addEventListener('mousedown', ckinBegin);
+  $('checkin-zone').addEventListener('touchstart', ckinBegin, {passive:false});
+  window.addEventListener('mouseup', function(){ if (ckinHolding) ckinEnd(); });
+  $('checkin-zone').addEventListener('touchend', function(){ if (ckinHolding) ckinEnd(); });
+  $('checkin-back').addEventListener('click', back);
+
+  function send(dur){
+    ckinDone = true; ckinHolding = false;
+    if (ckinRaf) cancelAnimationFrame(ckinRaf);
+    $('checkin-bars').classList.remove('live');
+    $('checkin-pill-fill').style.transform = 'scaleX(1)';
+    $('checkin-pill').classList.add('sunk');
+    $('checkin-pill-lbl').textContent = '✓ sent · it waits';
+    var note = $('checkin-note');
+    note.classList.add('sunk');
+    note.textContent = 'sent — it waits for whenever they\'re ready';
+
+    /* the write: local, always succeeds */
+    var p = ckinPerson;
+    var nv = { dir:'out', type:'voice', dur:dur, ago:0, meta:'just now', waiting:true, sentAt:Date.now() };
+    nv.id = p.id + '-n' + (p.items.length + 1);
+    if (ckinParent){
+      nv.answerOf = ckinParent.id;
+      nv.meta = 'just now · an answer';
+    }
+    p.items.unshift(nv);
+    if (ckinParent){
+      /* mark the parent answered for the home-state logic */
+      ckinParent.answeredBy = true;
+    }
+    aroundFeed.unshift({ txt:'you said how far to ' + p.name, t:'now' });
+    while (aroundFeed.length > 8) aroundFeed.pop();
+    toast(ckinParent
+      ? 'push sent to ' + p.name + ': "your how far was answered" — the only one there is'
+      : 'sent ✓ — it waits for whenever ' + (p.id === 'amara' || p.id === 'ifeoma' ? 'she' : 'he') + '\'s ready');
+
+    setTimeout(function(){
+      var prev = state.stack[state.stack.length - 2];
+      back();
+      if (prev === 'scr-person'){
+        renderThread(p, 0);
+        renderComposer(p);
+        $('msg-scroll').scrollTop = 0;
+      } else {
+        renderHome();
+      }
+      ckinDone = false;
+    }, 1200);
+  }
+
+  /* =============== the circle answers back (sim) =============== */
+  function simAnswer(p, waitingItem){
+    waitingItem.waiting = false;
+    waitingItem.answered = true;
+    waitingItem.meta = waitingItem.meta.replace(' · waiting', '') + ' · answered';
+    var ans = { dir:'in', type:'voice', dur:8 + Math.floor(Math.random() * 7), ago:0,
+                meta:'just now', chip:'an answer' };
+    ans.id = p.id + '-a' + (p.items.length + 1);
+    p.items.unshift(ans);
+    aroundFeed.unshift({ txt:p.name + ' answered your how far', t:'now' });
+    while (aroundFeed.length > 8) aroundFeed.pop();
+    if (state.ghost){
+      toast('answered — quietly · ghost is on');
+    } else {
+      toast('push: "' + p.name + ' answered your how far"');
+    }
+    if (state.person === p && $('scr-person').classList.contains('active')){
+      renderThread(p, 0);
+      renderComposer(p);
+    }
+    if ($('scr-circle').classList.contains('active')) renderHome();
+  }
+
+  var aroundFeed = [
+    { txt:'amara is around', t:'now' },
+    { txt:'ifeoma said how far to kelechi', t:'12 m' },
+    { txt:'tunde is around', t:'38 m' },
+    { txt:'spencer checked in on amara', t:'2 h' },
+    { txt:'amara answered kelechi', t:'4 h' },
+    { txt:'chidi went quiet', t:'1 d' },
+    { txt:'the circle breathed', t:'2 d' }
+  ];
+  var DRIFT_EVENTS = [
+    'someone said how far',
+    'a ping crossed the circle',
+    'an answer landed',
+    'a voice waited, then was answered',
+    'the circle exhaled'
+  ];
+
+  /* every 9s: pending sends get answered (responsive people only),
+     around-counts drift, the ticker ticks. the app is alive — quietly. */
+  setInterval(function(){
+    var now = Date.now();
+    PEOPLE.forEach(function(p){
+      if (!p.responsive) return;
+      var w = outWaiting(p);
+      if (w && w.sentAt && now - w.sentAt > 9000 && !w.simQueued){
+        w.simQueued = true;
+        simAnswer(p, w);
+      }
+    });
+    /* ambient drift */
+    if (Math.random() < .6){
+      var flip = PEOPLE[Math.floor(Math.random() * PEOPLE.length)];
+      flip.around = !flip.around;
+      if ($('scr-circle').classList.contains('active')) renderHome();
+    }
+    if ($('scr-around').classList.contains('active')){
+      aroundFeed.forEach(function(ev){ if (ev.t === 'now') ev.t = '1 m'; });
+      aroundFeed.unshift({ txt:DRIFT_EVENTS[Math.floor(Math.random() * DRIFT_EVENTS.length)], t:'now' });
+      while (aroundFeed.length > 8) aroundFeed.pop();
+      renderAround();
+    } else {
+      aroundFeed.forEach(function(ev){ if (ev.t === 'now') ev.t = '1 m'; });
+    }
+  }, 9000);
+
+  /* =============== 04 around =============== */
+  function renderAround(){
+    var n = PEOPLE.filter(function(p){ return p.around; }).length;
+    $('around-n').textContent = n;
+    $('around-sub').textContent = 'of your ' + PEOPLE.length + ' · around now';
+    var tk = $('around-ticker');
+    tk.innerHTML = '';
+    aroundFeed.forEach(function(ev, i){
+      var row = document.createElement('div');
+      row.className = 'tick';
+      row.innerHTML = '<span class="ttxt"></span><span class="ttime"></span>';
+      var tx = row.querySelector('.ttxt');
+      tx.textContent = ev.txt;
+      if (i >= 3) tx.className = 'ttxt old';
+      row.querySelector('.ttime').textContent = ev.t;
+      tk.appendChild(row);
+    });
+  }
+  $('around-back').addEventListener('click', back);
+
+  /* =============== settings =============== */
+  $('set-back').addEventListener('click', back);
+  $('circle-row').addEventListener('click', function(){ renderMyCircle(); show('scr-mycircle'); });
+  $('deepest-row').addEventListener('click', function(){ openPerson(PEOPLE[0]); });
+  $('notif-row').addEventListener('click', function(){
+    openDialog('Notifications', [
+      { name:'Answers', desc:'"tunde answered your how far" — the only push there will ever be' },
+      { name:'Anniversaries', desc:'"one year ago, she talked you through the night"' },
+      { name:'Nothing else', desc:'no badges, no streaks, no noise — ever' }
+    ]);
+  });
+  $('data-row').addEventListener('click', function(){
+    openDialog('Data & storage', [
+      { name:'On this device', desc:'every check-in lives on your phone' },
+      { name:'Offline', desc:'a check-in always succeeds — sync waits for signal' },
+      { name:'Nothing for sale', desc:'no ads, no tracking, no data leaves this phone' }
+    ]);
+  });
+  $('about-row').addEventListener('click', function(){
+    openDialog('About', [
+      { name:'how far 2.0 (build 1)', desc:'check in on the people you actually miss' },
+      { name:'A check-in', desc:'a tap that says "I\'m thinking of you", or 15 seconds of voice' },
+      { name:'It waits', desc:'no read receipts, no last seen — answers come whenever' },
+      { name:'Est. wherever you are', desc:'the ground remembers' }
+    ]);
+  });
+  document.querySelectorAll('#settings-root .row[data-toast]').forEach(function(r){
+    r.addEventListener('click', function(){ toast(r.getAttribute('data-toast')); });
+  });
+  function wireToggle(rowId, swId, onMsg, offMsg, onChange){
+    $(rowId).addEventListener('click', function(){
+      var sw = $(swId);
+      sw.classList.toggle('on');
+      toast(sw.classList.contains('on') ? onMsg : offMsg);
+      if (onChange) onChange(sw.classList.contains('on'));
+    });
+  }
+  wireToggle('push-trow', 'push-sw', 'Answer pushes on — the only one there is', 'Answer pushes off');
+  wireToggle('anniv-trow', 'anniv-sw', 'Anniversaries on — the ground remembers for you', 'Anniversaries off');
+  $('ghost-trow').addEventListener('click', function(){
+    setGhost(!state.ghost);
+    toast(state.ghost ? 'ghost on — you\'re here, but quiet' : 'you\'re around again');
+  });
+  function setGhost(v){
+    state.ghost = v;
+    var sw = $('ghost-sw');
+    if (v) sw.classList.add('on'); else sw.classList.remove('on');
+    if ($('scr-circle').classList.contains('active')) renderHome();
+  }
+  var KEEP = [
+    { name:'Forever', desc:'it\'s yours — history sinks, nothing fades' },
+    { name:'2 years', desc:'older check-ins fade from this device' },
+    { name:'1 year', desc:'keep it light — the deep past lets go' }
+  ];
+  $('keep-row').addEventListener('click', function(){
+    openDialog('Keep history', KEEP.map(function(o, i){
+      return { name:o.name, desc:o.desc, current:i === state.keep, pick:i };
+    }), function(name, idx){
+      state.keep = idx;
+      $('keep-sub').textContent = 'keep: ' + name.toLowerCase() +
+        (idx === 0 ? ' — it\'s yours, on this phone' : ' · older check-ins fade on this device');
+    });
+  });
+
+  /* =============== 05 how far you've gone (my circle) =============== */
+  $('mc-back').addEventListener('click', back);
+  function renderMyCircle(){
+    var mine = 0, answered = 0, deepestP = null, deepestAgo = -1;
+    PEOPLE.forEach(function(p){
+      p.items.forEach(function(it){
+        if (it.dir === 'out'){
+          mine++;
+          if (it.answered) answered++;
+          if (it.ago > deepestAgo){ deepestAgo = it.ago; deepestP = p; }
+        }
+      });
+    });
+    $('mc-stats').innerHTML =
+      '<div class="stat"><b>' + mine + '</b><span>check-ins</span></div>' +
+      '<div class="stat"><b>' + answered + '</b><span>answered</span></div>' +
+      '<div class="stat"><b>' + (deepestP ? deepestP.name : '—') + '</b><span>deepest</span></div>';
+    var list = $('mc-list');
+    list.innerHTML = '';
+    var withHistory = PEOPLE.filter(function(p){ return p.items.length > 0; });
+    withHistory.forEach(function(p, i){
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div class="c"><div class="t"></div><div class="s"></div></div><span class="chev">›</span>';
+      row.querySelector('.t').textContent = p.name;
+      var outs = p.items.filter(function(it){ return it.dir === 'out'; }).length;
+      var answeredYou = p.items.some(function(it){ return it.dir === 'in' && it.chip === 'an answer'; });
+      row.querySelector('.s').textContent = outs + (outs === 1 ? ' check-in' : ' check-ins') +
+        ' · ' + (p.span === '—' ? 'just started' : p.span) +
+        (answeredYou ? ' · ◈ answered you' : '');
+      row.addEventListener('click', function(){ openPerson(p); });
+      list.appendChild(row);
+      if (i < withHistory.length - 1){
+        var d = document.createElement('div'); d.className = 'divider'; list.appendChild(d);
+      }
+    });
+    $('circle-sub').textContent = PEOPLE.length + ' people · ' + mine + ' check-ins of yours';
+    $('deepest-sub').textContent = (deepestP ? deepestP.name + ' · ' + deepestP.span + ' back' : '—');
+  }
+
+  /* =============== dialog (kit) =============== */
+  var dialogCb = null;
+  function openDialog(title, items, cb){
+    dialogCb = cb || null;
+    var d = $('dialog');
+    var html = '<div class="dtitle"></div>';
+    items.forEach(function(it, i){
+      html += '<div class="pick' + (it.current ? ' cur' : '') + '" data-name="' + it.name.replace(/"/g, '') + '"' +
+              (typeof it.pick === 'number' ? ' data-pick="' + it.pick + '"' : '') + '>' +
+              '<div class="ph">' + (it.current ? '✓ ' : '') + it.name + '</div>' +
+              (it.desc ? '<div class="pd">' + it.desc + '</div>' : '') +
+              '</div>';
+      if (i < items.length - 1) html += '<div class="divider"></div>';
+    });
+    html += '<button class="btn sm dlg-close">Cancel</button>';
+    d.innerHTML = html;
+    d.querySelector('.dtitle').textContent = title;
+    d.querySelectorAll('.pick').forEach(function(pk){
+      pk.addEventListener('click', function(){
+        if (dialogCb){
+          var idx = pk.getAttribute('data-pick');
+          dialogCb(pk.getAttribute('data-name'), idx !== null ? parseInt(idx, 10) : 0);
+        }
+        closeDialog();
+      });
+    });
+    d.querySelector('.dlg-close').addEventListener('click', closeDialog);
+    $('overlay').classList.add('show');
+  }
+  function closeDialog(){ $('overlay').classList.remove('show'); dialogCb = null; }
+  $('overlay').addEventListener('click', function(e){ if (e.target === this) closeDialog(); });
+
+  /* =============== boot =============== */
+  PEOPLE.forEach(function(p){ p.items.forEach(function(it, i){ it.id = it.id || (p.id + '-v' + i); }); });
+  renderHome();
+})();
+</script>
+</body>
+</html>

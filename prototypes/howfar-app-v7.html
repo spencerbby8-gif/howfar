@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>how far</title>
+<style>
+/* ================================================================
+   how far — v7
+   UI: 100% ReplyMate kit — every component below is from the repo:
+     colors.xml · themes.xml · activity_home/conversation/settings/voice
+     Ui.java (row/toggleRow/label/divider/primaryBtn/ghostBtn/field)
+     btn_primary · btn_ghost · bg_field · bg_card · bubbles · splash
+   Architecture: howfar-architecture.md (approved)
+     ground home · strata place with dig + bedrock · hold-to-drop,
+     release = sunk · presence-gated writes · answers not likes ·
+     live count, never a coordinate · no search · audio only
+   The ONLY non-ReplyMate visual: the how far logo.
+   ================================================================ */
+:root{
+  --bg:#0D1117; --card:#161B22; --accent:#0A84FF; --text:#FFFFFF; --dim:#AAB2BD;
+  --red:#FF6B6B; --green:#3FB950; --field:#11161D; --stroke:#2A3139;
+  --bin:#1C2330; --bout:#1E3250;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%; margin:0;}
+body{background:#000; font-family:Roboto,"Helvetica Neue",-apple-system,"Segoe UI",Arial,sans-serif;
+  color:var(--text); font-size:14px; overflow:hidden;}
+#frame{max-width:480px; height:100dvh; margin:0 auto; background:var(--bg);
+  position:relative; overflow:hidden; display:flex; flex-direction:column;}
+
+/* status bar */
+#statusbar{flex:none; height:30px; display:flex; justify-content:space-between; align-items:center;
+  padding:0 16px; font-size:12px; color:rgba(255,255,255,.85); background:var(--bg);}
+#statusbar .sicons{display:flex; align-items:center; gap:6px;}
+.sig{display:flex; align-items:flex-end; gap:1.5px; height:11px;}
+.sig i{width:2.5px; background:rgba(255,255,255,.85); border-radius:.5px;}
+.sig i:nth-child(1){height:4px;} .sig i:nth-child(2){height:6.5px;}
+.sig i:nth-child(3){height:9px;} .sig i:nth-child(4){height:11px;}
+.batt{width:20px; height:10px; border:1px solid rgba(255,255,255,.6); border-radius:2.5px; position:relative;}
+.batt::after{content:""; position:absolute; inset:1.5px 6px 1.5px 1.5px; background:rgba(255,255,255,.85);}
+
+/* screens = activities, single stack, no tabs */
+#screens{flex:1; position:relative; overflow:hidden; background:var(--bg);}
+.screen{position:absolute; inset:0; background:var(--bg); display:none; flex-direction:column;}
+.screen.active{display:flex;}
+.screen.slide{animation:act_in .19s ease-out;}
+@keyframes act_in{from{opacity:.3; transform:translateX(26px);} to{opacity:1; transform:none;}}
+.scroll{flex:1; overflow-y:auto; min-height:0;}
+.scroll::-webkit-scrollbar{width:0;}
+
+/* ---- ReplyMate kit ---- */
+.p20{padding:20px;}
+.h1{font-size:24px; font-weight:700; margin:0;}
+.h1.backlink{cursor:pointer; display:inline-block;}
+.sub{font-size:12px; color:var(--dim); margin:2px 0 0;}
+.statusline{font-size:12px; color:var(--accent); margin-top:10px; cursor:default;}
+.statusline.ok{color:var(--green);} .statusline.warn{color:#F0B450; cursor:pointer;}
+.privacyline{font-size:11px; color:var(--dim); margin-top:6px;}
+.btn{display:block; width:100%; background:#3E4448; border:none; color:var(--text);
+  font-family:inherit; font-size:14px; font-weight:500; text-transform:uppercase; letter-spacing:.03em;
+  padding:13px 16px; border-radius:2px; cursor:pointer; margin-top:16px;}
+.btn:active{background:#33393d;}
+.btn.sm{margin-top:0; padding:12px 14px; font-size:13px; width:auto;}
+.btn-primary{display:block; width:100%; background:var(--accent); border:none; color:#fff;
+  font-family:inherit; font-size:16px; font-weight:700; min-height:52px; border-radius:14px;
+  cursor:pointer; margin-top:14px; position:relative; overflow:hidden; user-select:none; touch-action:none;}
+.btn-primary:active{background:#0871d8;}
+.btn-primary .lbl{position:relative; z-index:2;}
+.btn-primary .hfill{position:absolute; inset:0; background:#0871d8; transform-origin:left; transform:scaleX(0); z-index:1;}
+.btn-primary.sunk{background:var(--green);}
+.btn-ghost{display:block; width:100%; background:transparent; border:1px solid #3DFFFFFF; color:var(--text);
+  font-family:inherit; font-size:16px; min-height:52px; border-radius:14px; cursor:pointer; margin-top:8px;
+  position:relative; overflow:hidden; user-select:none; touch-action:none;}
+.btn-ghost:active{background:rgba(255,255,255,.05);}
+.btn-ghost .hfill{position:absolute; inset:0; background:rgba(255,255,255,.07); transform-origin:left; transform:scaleX(0);}
+.btn-ghost .lbl{position:relative; z-index:2;}
+.row{display:flex; align-items:center; padding:14px 0; cursor:pointer;}
+.row .c{flex:1; min-width:0;}
+.row .t{font-size:16px;}
+.row .s{font-size:13px; color:var(--dim); margin-top:2px;}
+.row .chev{font-size:22px; color:var(--dim); font-weight:400; flex:none; margin-left:8px;}
+.divider{height:1px; background:var(--stroke);}
+.label{font-size:12px; color:var(--dim); padding:12px 0 4px;}
+.trow{display:flex; align-items:center; padding:10px 4px 10px 0; cursor:pointer;}
+.trow .c{flex:1; min-width:0;}
+.trow .t{font-size:16px;}
+.trow .s{font-size:13px; color:var(--dim); margin-top:2px;}
+.sw{flex:none; width:38px; height:20px; border-radius:20px; background:#3a4046; position:relative;
+  margin-left:12px; transition:background .15s;}
+.sw::after{content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
+  background:#fff; transition:left .15s;}
+.sw.on{background:var(--accent);}
+.sw.on::after{left:20px;}
+.card{background:var(--card); border-radius:12px; padding:14px;}
+
+/* logo — the one brand element */
+.logo{display:inline-block; vertical-align:middle;}
+.logo .ldot{transform-box:fill-box; transform-origin:center; animation:ldot 2.4s ease-in-out infinite;}
+@keyframes ldot{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+
+/* splash */
+#scr-splash{align-items:center; justify-content:center; text-align:center;}
+.splash-wrap{position:relative; width:170px; height:170px; display:flex; align-items:center; justify-content:center;}
+.splash-glow{position:absolute; inset:-45px; border-radius:50%;
+  background:radial-gradient(circle, rgba(10,132,255,.22) 0%, rgba(10,132,255,.1) 45%, rgba(10,132,255,0) 72%);}
+.splash-ring{position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(10,132,255,.4);}
+#scr-splash .h1{margin-top:20px;}
+
+/* ---- home = the ground (activity_home anatomy) ---- */
+.home-head{display:flex; align-items:center;}
+.home-head .tt{flex:1; min-width:0;}
+.home-head .tt .nm{display:flex; align-items:center; gap:9px;}
+.gear{font-size:24px; color:var(--dim); padding:8px; cursor:pointer; background:none; border:none; font-family:inherit;}
+.holdnote{font-size:11px; color:var(--dim); text-align:center; margin-top:6px;}
+#near-list .row:first-child{padding-top:8px;}
+
+/* ---- a place = strata (conversation anatomy) ---- */
+.conv-head{display:flex; align-items:center; padding:16px;}
+.conv-back{font-size:28px; color:var(--accent); padding:0 12px 0 4px; cursor:pointer; flex:none; line-height:1;}
+.conv-tt{flex:1; min-width:0;}
+.conv-name{font-size:18px; font-weight:700;}
+.conv-rel{font-size:12px; color:var(--dim); margin-top:1px;}
+.conv-act{font-size:14px; color:var(--accent); padding:8px; cursor:pointer; flex:none; background:none; border:none; font-family:inherit;}
+#msg-scroll{padding:0 16px;}
+.msg-list{display:flex; flex-direction:column; padding-bottom:10px;}
+.bandhead{font-size:12px; color:var(--dim); letter-spacing:.08em; text-transform:uppercase; margin:18px 0 2px;}
+.bandhead:first-child{margin-top:6px;}
+.band.new{animation:bandin .4s ease both;}
+@keyframes bandin{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;}}
+.bubble{max-width:80%; border-radius:14px; padding:10px 12px; margin-top:8px; cursor:pointer;}
+.bubble.in{background:var(--bin); align-self:flex-start;}
+.bubble.out{background:var(--bout); align-self:flex-end; margin-left:48px;}
+.bubble .chip{font-size:11px; font-weight:700; margin-bottom:4px; color:var(--accent);}
+.bubble .chip.done{color:var(--green);}
+.brow{display:flex; align-items:center; gap:9px;}
+.pbtn{width:28px; height:28px; border-radius:50%; background:var(--accent); border:none; color:#fff;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; font-size:11px; padding:0;}
+.pbtn:active{background:#0871d8;}
+.bars{display:flex; align-items:center; gap:2px; height:18px; flex:1;}
+.bars i{width:2px; border-radius:1px; background:var(--dim); height:6px;}
+.bubble.out .bars i{background:#B9CCE4;}
+.bars.live i{animation:bdance 1s ease-in-out infinite;}
+@keyframes bdance{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
+.bdur{font-size:13px; flex:none;}
+.bmeta{font-size:11px; color:var(--dim); margin-top:5px;}
+.firststate{text-align:center; padding:36px 12px; color:var(--dim); font-size:14px;}
+/* dig boundary */
+.digzone{margin-top:18px;}
+.digzone .btn-ghost{margin-top:0;}
+.digzone .dl{display:block; font-size:15px; font-weight:700;}
+.digzone .dl small{display:block; font-size:11px; color:var(--dim); font-weight:400; margin-top:2px;}
+/* bedrock = the floor */
+.bedrock{margin-top:22px; text-align:center; padding-bottom:8px;}
+.bedrock .stmt{font-size:18px; font-weight:700; line-height:1.4;}
+.bedrock .floor{font-size:11px; color:var(--dim); margin-top:6px;}
+.bedrock .anniv{font-size:12px; color:var(--dim); margin-top:12px;}
+.bubble.bedrocked{opacity:.55;}
+/* composer — conditional, presence-gated */
+.composer{background:var(--card); padding:12px; border-top:1px solid var(--stroke);}
+.composer .btn-primary{margin-top:0;}
+.notstanding{padding:12px 16px 2px; font-size:12px; color:var(--accent);}
+.walklink{display:block; padding:0 16px 12px; font-size:11px; color:var(--dim); font-style:italic;
+  background:none; border:none; font-family:inherit; cursor:pointer; text-align:left; width:100%;}
+
+/* ---- drop (activity_voice anatomy: ‹ title + card + primary) ---- */
+.rec-status{font-size:12px; color:var(--green); margin-top:10px;}
+.parentnote{font-size:11px; color:var(--dim); margin-top:4px;}
+.dropzone{margin-top:16px; cursor:pointer; user-select:none; touch-action:none;}
+.dropzone .label{padding-top:0;}
+.rec-timer{font-size:15px; margin-top:6px;}
+.rec-bars{display:flex; align-items:center; gap:2.5px; height:24px; margin-top:10px;}
+.rec-bars i{width:3px; border-radius:2px; background:var(--accent); height:8px;}
+.rec-bars.live i{animation:bdance 1s ease-in-out infinite;}
+.dropzone .btn-primary{margin-top:14px;}
+.drop-note{font-size:11px; color:var(--dim); margin-top:10px; line-height:1.5;}
+.drop-note.sunk{color:var(--green);}
+
+/* ---- live ---- */
+.livenum{text-align:center; padding:22px 0 4px;}
+.livenum .n{font-size:64px; font-weight:700; line-height:1;}
+.livenum p{margin:8px 0 0; font-size:12px; color:var(--dim);}
+.livenum .priv{display:inline-block; margin-top:10px; font-size:11px; color:var(--dim);
+  border:1px solid var(--stroke); border-radius:99px; padding:4px 11px;}
+.tickhead{display:flex; align-items:center; gap:10px; margin:16px 0 2px; padding:0 2px;}
+.tickhead .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); animation:ldot 2s ease-in-out infinite;}
+.tickhead span{font-size:12px; color:var(--dim);}
+.tickhead .line{flex:1; height:1px; background:var(--stroke);}
+.tick{display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--stroke);}
+.tick .ttxt{flex:1; font-size:13px;}
+.tick .ttxt.old{color:var(--dim);}
+.tick .ttime{font-size:11px; color:var(--dim); flex:none;}
+
+/* ---- my ground ---- */
+.statrow{display:flex; gap:9px; margin-top:14px;}
+.stat{flex:1; text-align:center; padding:13px 6px 11px; background:var(--card); border-radius:12px;}
+.stat b{display:block; font-size:22px; font-weight:700;}
+.stat span{display:block; font-size:12px; color:var(--dim); margin-top:3px;}
+.nofollow{font-size:11px; color:var(--dim); text-align:center; padding:16px 0 4px;}
+
+/* toast + dialog */
+#toast{position:absolute; left:50%; bottom:72px; transform:translateX(-50%) translateY(8px);
+  background:#22272e; color:#fff; font-size:13px; padding:10px 18px; border-radius:22px;
+  opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; z-index:60; white-space:nowrap; max-width:92%;}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+#overlay{position:absolute; inset:0; background:rgba(0,0,0,.6); display:none; z-index:50;
+  align-items:center; justify-content:center; padding:28px;}
+#overlay.show{display:flex;}
+.dialog{background:#1a1f26; border-radius:4px; padding:18px 16px 10px; width:100%; max-width:340px;
+  max-height:80%; overflow-y:auto;}
+.dialog .dtitle{font-size:18px; font-weight:700; margin-bottom:8px;}
+.pick{padding:10px 0; cursor:pointer;}
+.pick .ph{font-size:16px;}
+.pick.cur .ph{color:var(--accent); font-weight:700;}
+.pick .pd{font-size:13px; color:var(--dim); margin-top:2px;}
+.dlg-close{width:auto; margin:10px 0 4px; align-self:flex-end; padding:8px 16px;}
+</style>
+</head>
+<body>
+<div id="frame">
+
+  <div id="statusbar">
+    <span id="clock">18:20</span>
+    <span class="sicons">
+      <span class="sig"><i></i><i></i><i></i><i></i></span>
+      <span style="font-size:10px;">5G</span>
+      <span class="batt"></span>
+    </span>
+  </div>
+
+  <div id="screens">
+
+    <!-- 00 SPLASH -->
+    <section class="screen active" id="scr-splash">
+      <div class="splash-wrap">
+        <div class="splash-glow"></div>
+        <div class="splash-ring"></div>
+        <svg class="logo" width="86" height="77" viewBox="0 0 112 100" aria-label="how far">
+          <g transform="translate(8,-7)">
+            <circle cx="40" cy="58" r="24" fill="none" stroke="#C6FF3D" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+            <circle cx="88" cy="24" r="11" fill="#C6FF3D"/>
+          </g>
+          <circle cx="40" cy="58" r="24" fill="none" stroke="#FF4A1C" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+          <circle class="ldot" cx="88" cy="24" r="11" fill="#FF4A1C"/>
+        </svg>
+      </div>
+      <h1 class="h1">how far</h1>
+      <p class="sub">the ground remembers</p>
+    </section>
+
+    <!-- 01 THE GROUND (home) -->
+    <section class="screen" id="scr-ground">
+      <div class="scroll">
+        <div class="p20" style="padding-bottom:0;">
+          <div class="home-head">
+            <div class="tt">
+              <div class="nm">
+                <svg class="logo" width="24" height="21" viewBox="0 0 112 100" aria-hidden="true">
+                  <g transform="translate(8,-7)"><circle cx="40" cy="58" r="24" fill="none" stroke="#C6FF3D" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/><circle cx="88" cy="24" r="11" fill="#C6FF3D"/></g>
+                  <circle cx="40" cy="58" r="24" fill="none" stroke="#FF4A1C" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+                  <circle cx="88" cy="24" r="11" fill="#FF4A1C"/>
+                </svg>
+                <span class="h1">how far</span>
+              </div>
+              <p class="sub">what people left where they stood</p>
+            </div>
+            <button class="gear" id="gear-btn" aria-label="settings">⚙</button>
+          </div>
+
+          <div class="statusline ok" id="ground-status">● you're standing in rumuokoro junction</div>
+          <div class="privacyline">your position never leaves this phone · voices stay where they were dropped</div>
+
+          <button class="btn-primary" id="ground-drop"><span class="lbl">hold to drop</span><span class="hfill" id="ground-drop-fill"></span></button>
+          <div class="holdnote">where you stand is where it sinks · it only works where you are</div>
+
+          <div class="label" style="margin-top:18px;">near you</div>
+          <div id="near-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 A PLACE = strata -->
+    <section class="screen" id="scr-place">
+      <div class="conv-head">
+        <span class="conv-back" id="place-back">‹</span>
+        <div class="conv-tt">
+          <div class="conv-name" id="place-name">rumuokoro junction</div>
+          <div class="conv-rel" id="place-rel">6 here right now · a count, never a coordinate</div>
+        </div>
+        <button class="conv-act" id="place-live">Live</button>
+        <button class="conv-act" id="place-info">Info</button>
+      </div>
+      <div class="scroll" id="msg-scroll">
+        <div class="msg-list" id="msg-list"></div>
+      </div>
+      <div id="composer-zone"></div>
+    </section>
+
+    <!-- 03 DROP -->
+    <section class="screen" id="scr-drop">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="drop-back">‹ </span>drop a voice</h1>
+          <p class="sub" style="font-size:13px;">it only works where you are</p>
+          <div class="rec-status" id="drop-status">● you're standing in rumuokoro junction</div>
+          <div class="parentnote" id="drop-parent" style="display:none;">↳ an answer to a voice below</div>
+
+          <div class="card dropzone" id="dropzone">
+            <div class="label">Recording</div>
+            <div class="rec-timer" id="drop-timer">0:00 / 0:15</div>
+            <div class="rec-bars" id="drop-bars">
+              <i style="height:8px"></i><i style="height:16px"></i><i style="height:11px"></i>
+              <i style="height:20px"></i><i style="height:13px"></i><i style="height:18px"></i>
+              <i style="height:9px"></i><i style="height:15px"></i><i style="height:10px"></i>
+            </div>
+            <div class="btn-primary" id="drop-pill" style="margin-top:14px;">
+              <span class="lbl" id="drop-pill-lbl">hold to drop</span>
+              <span class="hfill" id="drop-pill-fill"></span>
+            </div>
+            <div class="drop-note" id="drop-note">let go and it sinks. it waits for whoever stands next.<br>no retakes — it's a moment, not a message</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 LIVE -->
+    <section class="screen" id="scr-live">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="live-back">‹ </span><span id="live-name">rumuokoro junction</span></h1>
+          <p class="sub" style="font-size:13px;">live · the place, not the people</p>
+          <div class="livenum">
+            <div class="n" id="live-n">6</div>
+            <p>here right now</p>
+            <span class="priv">a count, never a coordinate</span>
+          </div>
+          <div class="tickhead"><span class="dot"></span><span>the ground, ticking</span><span class="line"></span></div>
+          <div id="ticker"></div>
+          <p class="privacyline" style="margin-top:14px;">deliberately not live: who, typing, read receipts, anyone's location — ever</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="screen" id="scr-settings">
+      <div class="scroll">
+        <div class="p20" id="settings-root">
+          <h1 class="h1"><span class="h1 backlink" id="set-back">‹ </span>Settings</h1>
+
+          <div class="label">Account</div>
+          <div class="row" data-toast="Profile — coming in the next build">
+            <div class="c"><div class="t">My profile</div><div class="s">name, avatar, presence</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" data-toast="Account — coming in the next build">
+            <div class="c"><div class="t">Account</div><div class="s">email · sync across devices</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">My ground</div>
+          <div class="row" id="myplaces-row">
+            <div class="c"><div class="t">My places</div><div class="s" id="myplaces-sub">—</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="deepest-row">
+            <div class="c"><div class="t">Deepest memory</div><div class="s">old campus gate · 2 years down</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">Place sensing</div>
+          <div class="row" id="precision-row">
+            <div class="c"><div class="t">Location precision</div><div class="s" id="precision-sub">active: exact · voices can be dropped ✓</div></div><span class="chev">›</span>
+          </div>
+          <div class="trow" id="alerts-trow">
+            <div class="c"><div class="t">Standing alerts</div><div class="s">ping when someone drops where you stand</div></div>
+            <span class="sw on" id="alerts-sw"></span>
+          </div>
+
+          <div class="label">Privacy</div>
+          <div class="trow" id="ghost-trow">
+            <div class="c"><div class="t">Ghost mode</div><div class="s">invisible in the live count</div></div>
+            <span class="sw" id="ghost-sw"></span>
+          </div>
+          <div class="trow" id="livecount-trow">
+            <div class="c"><div class="t">Live counts</div><div class="s">show how many people are at each place</div></div>
+            <span class="sw on" id="livecount-sw"></span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="notif-row">
+            <div class="c"><div class="t">Notifications</div><div class="s">answers + anniversaries, at places you've seeded</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="data-row">
+            <div class="c"><div class="t">Data &amp; storage</div><div class="s">voices stay on this device</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">About</div>
+          <div class="row" id="about-row">
+            <div class="c"><div class="t">About</div><div class="s">how far 1.0 · the ground remembers</div></div><span class="chev">›</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 MY GROUND -->
+    <section class="screen" id="scr-myground">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="mg-back">‹ </span>my ground</h1>
+          <p class="sub" style="font-size:13px;">everywhere you've left something</p>
+          <div class="statrow" id="mg-stats"></div>
+          <div id="mg-list" style="margin-top:8px;"></div>
+          <div class="nofollow">no follower counts. not for anyone, not anywhere, ever.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="overlay"><div class="dialog" id="dialog"></div></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* =============== data =============== */
+  /* band = depth, DERIVED from age (spec §05). 0 surface · 1 fresh · 2 recent
+     3 settling · 4 sediment · 5 deep · 6 bedrock. 0–3 load on open;
+     4+ sit behind the dig boundary. bedrock is the floor. */
+  var BANDS = [
+    { label:'surface · 0–1 h' }, { label:'fresh · 1–24 h' }, { label:'recent · 1–7 d' },
+    { label:'settling · 7–30 d' }, { label:'sediment · 1–6 mo' }, { label:'deep · 6–12 mo' },
+    { label:'bedrock · 1 y +' }
+  ];
+  var FREE_BANDS = 4;
+
+  var PLACES = [
+    { id:'junction', name:'rumuokoro junction', live:6, moments:9, deepest:'2 years down',
+      voices:[
+        { dir:'in',  dur:12, band:0, meta:'4 min ago' },
+        { dir:'out', dur:15, band:0, meta:'40 minutes ago' },
+        { dir:'in',  dur:11, band:1, meta:'this morning' },
+        { dir:'in',  dur:15, band:2, meta:'friday night' },
+        { dir:'in',  dur:14, band:3, meta:'three weeks back' },
+        { dir:'out', dur:10, band:3, meta:'3 weeks ago' },
+        { dir:'in',  dur:15, band:4, meta:'a voice from march', found:true },
+        { dir:'in',  dur:10, band:5, meta:'last december', found:true },
+        { dir:'in',  dur:15, band:6, meta:'the oldest here · it goes no further', found:true }
+      ]},
+    { id:'spot', name:'the spot', live:2, moments:12, deepest:'1 year down',
+      voices:[
+        { dir:'out', dur:14, band:0, meta:'yesterday', chip:'an answer' },
+        { dir:'in',  dur:9,  band:1, meta:'2 days ago · someone answered you', chip:'an answer' },
+        { dir:'out', dur:12, band:2, meta:'3 weeks ago' },
+        { dir:'in',  dur:15, band:4, meta:'from february', found:true }
+      ]},
+    { id:'market', name:'creek market', live:0, moments:18, deepest:'1 year down',
+      voices:[
+        { dir:'in', dur:13, band:1, meta:'4 days ago' },
+        { dir:'in', dur:8,  band:2, meta:'last week' },
+        { dir:'in', dur:11, band:3, meta:'3 weeks ago' }
+      ]},
+    { id:'gate', name:'old campus gate', live:1, moments:8, deepest:'2 years down',
+      voices:[
+        { dir:'out', dur:15, band:3, meta:'5 months ago' },
+        { dir:'in',  dur:10, band:5, meta:'1 year ago', found:true },
+        { dir:'in',  dur:15, band:6, meta:'2 years ago · four voices down here', found:true }
+      ]},
+    { id:'unnamed', name:'unnamed place', live:0, moments:0, deepest:'—',
+      voices:[] }
+  ];
+
+  var state = {
+    stack:['scr-splash'],
+    place:null,
+    standing:PLACES[0],
+    locationOn:true,
+    dugMax:{},
+    parent:null,
+    precision:2
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var screens = document.querySelectorAll('.screen');
+
+  function seeded(p){ return p.voices.some(function(v){ return v.dir === 'out'; }); }
+  function answered(p){ return p.voices.some(function(v){ return v.dir === 'in' && v.chip === 'an answer'; }); }
+
+  /* =============== router =============== */
+  function show(id, push){
+    var el = $(id);
+    if (!el) return;
+    if (push !== false && state.stack[state.stack.length - 1] !== id) state.stack.push(id);
+    for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+    el.classList.add('active');
+    el.classList.remove('slide'); void el.offsetWidth; el.classList.add('slide');
+    /* the ground is live data — always re-render it when it becomes visible */
+    if (id === 'scr-ground') renderGround();
+  }
+  function back(){
+    if (state.stack.length > 1) state.stack.pop();
+    show(state.stack[state.stack.length - 1], false);
+  }
+
+  /* =============== toast =============== */
+  var toastTimer = null;
+  function toast(msg){
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2300);
+  }
+
+  /* =============== clock =============== */
+  function tickClock(){
+    var d = new Date();
+    var h = d.getHours(), m = d.getMinutes();
+    $('clock').textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+  tickClock(); setInterval(tickClock, 15000);
+
+  /* =============== splash =============== */
+  var splashTimer = setTimeout(enterApp, 2200);
+  function enterApp(){
+    clearTimeout(splashTimer);
+    if (state.stack[state.stack.length - 1] === 'scr-splash') show('scr-ground', true);
+  }
+  $('scr-splash').addEventListener('click', enterApp);
+
+  /* =============== hold-to-commit (shared gesture) =============== */
+  function makeHold(btnId, fillId, ms, canStart, onCommit, onEarly){
+    var btn = $(btnId), fill = $(fillId);
+    var holding = false, t0 = 0, raf = null, done = false;
+    function step(ts){
+      if (!holding || done) return;
+      var p = Math.min(1, (ts - t0) / ms);
+      if (fill) fill.style.transform = 'scaleX(' + p + ')';
+      if (p >= 1){ done = true; holding = false; onCommit(); setTimeout(reset, 300); return; }
+      raf = requestAnimationFrame(step);
+    }
+    function reset(){
+      if (raf) cancelAnimationFrame(raf);
+      holding = false;
+      if (fill){
+        fill.style.transition = 'transform .3s ease';
+        fill.style.transform = 'scaleX(0)';
+        setTimeout(function(){ fill.style.transition = 'none'; }, 320);
+      }
+    }
+    function begin(e){
+      if (done) return;
+      e.preventDefault();
+      if (canStart && !canStart()){ if (onEarly) onEarly(); return; }
+      holding = true; t0 = performance.now();
+      raf = requestAnimationFrame(step);
+    }
+    function end(){
+      if (!holding) return;
+      if (performance.now() - t0 < ms){ reset(); if (onEarly) onEarly(); }
+    }
+    btn.addEventListener('mousedown', begin);
+    btn.addEventListener('touchstart', begin, {passive:false});
+    btn.addEventListener('mouseup', end);
+    btn.addEventListener('mouseleave', function(){ if (holding) end(); });
+    btn.addEventListener('touchend', end);
+  }
+
+  /* =============== 01 the ground =============== */
+  function renderGround(){
+    var st = $('ground-status');
+    if (state.locationOn){
+      st.className = 'statusline ok';
+      st.textContent = '● you\'re standing in ' + state.standing.name;
+    } else {
+      st.className = 'statusline warn';
+      st.textContent = 'Location is off — tap to enable (it only works where you are)';
+    }
+    var list = $('near-list');
+    list.innerHTML = '';
+    PLACES.forEach(function(p, i){
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div class="c"><div class="t"></div><div class="s"></div></div><span class="chev">›</span>';
+      row.querySelector('.t').textContent = p.name + (p === state.standing ? '  · you\'re here' : '');
+      var s = (p.live > 0 ? '● ' + p.live + ' here now · ' : '') +
+              (seeded(p) ? 'yours · ' : '') +
+              (p.voices.length ? lastPreview(p) : 'nothing here yet — you\'re the first');
+      row.querySelector('.s').textContent = s;
+      row.addEventListener('click', function(){ openPlace(p); });
+      list.appendChild(row);
+      if (i < PLACES.length - 1){
+        var d = document.createElement('div'); d.className = 'divider'; list.appendChild(d);
+      }
+    });
+  }
+  function lastPreview(p){
+    var v = null;
+    for (var i = 0; i < p.voices.length; i++){ if (p.voices[i].band <= FREE_BANDS - 1) v = p.voices[i]; }
+    v = v || p.voices[0];
+    if (!v) return '';
+    return (v.dir === 'out' ? 'you · ' : 'a voice · ') + v.meta + ' · 0:' + (v.dur < 10 ? '0' : '') + v.dur;
+  }
+  $('ground-status').addEventListener('click', function(){
+    state.locationOn = !state.locationOn;
+    renderGround();
+    if (!state.locationOn) toast('Location off — you can browse, but not drop');
+  });
+  makeHold('ground-drop', 'ground-drop-fill', 1000,
+    function(){ return state.locationOn; },
+    function(){ openDrop(state.standing, null); },
+    function(){
+      if (!state.locationOn) toast('Location is off — it only works where you are');
+      else toast('keep holding — a drop needs intent');
+    });
+  $('gear-btn').addEventListener('click', function(){ show('scr-settings'); });
+
+  /* =============== 02 a place = strata =============== */
+  function fmt(s){ return '0:' + (s < 10 ? '0' : '') + s; }
+  function genBars(n, seed){
+    var html = '';
+    for (var i = 0; i < n; i++){
+      var h = 5 + Math.abs(Math.sin(i * (seed || 1.7) * 3.1)) * 12;
+      html += '<i style="height:' + h.toFixed(0) + 'px; animation-delay:' + ((i % 5) * .12).toFixed(2) + 's"></i>';
+    }
+    return html;
+  }
+  function loadedMax(p){
+    return state.dugMax[p.id] !== undefined ? state.dugMax[p.id] : FREE_BANDS - 1;
+  }
+  function hasDeeper(p, maxLoaded){
+    return p.voices.some(function(v){ return v.band > maxLoaded; });
+  }
+  function renderThread(p, animateFrom){
+    var list = $('msg-list');
+    list.innerHTML = '';
+    if (!p.voices.length){
+      var first = document.createElement('div');
+      first.className = 'firststate';
+      first.textContent = 'Nothing here yet. You\'re the first.';
+      list.appendChild(first);
+      return;
+    }
+    var max = Math.min(loadedMax(p), BANDS.length - 1);
+    for (var b = 0; b <= max; b++){
+      var vs = p.voices.filter(function(v){ return v.band === b; });
+      if (!vs.length && b < 6) continue;
+      var wrap = document.createElement('div');
+      wrap.className = 'band' + (b === animateFrom ? ' new' : '');
+      if (b === 6){
+        var br = document.createElement('div');
+        br.className = 'bedrock';
+        br.innerHTML = '<div class="stmt">Two years down.<br>Four voices.</div>' +
+          '<div class="floor">this is the bottom. every place has one — on purpose.</div>' +
+          '<div class="anniv">◈ one year ago, you stood here</div>';
+        wrap.appendChild(br);
+      } else {
+        var head = document.createElement('div');
+        head.className = 'bandhead';
+        head.textContent = BANDS[b].label;
+        wrap.appendChild(head);
+      }
+      vs.forEach(function(v){ wrap.appendChild(bubbleEl(p, v, b === 6)); });
+      list.appendChild(wrap);
+    }
+    if (!hasDeeper(p, max)){
+      var floor = document.createElement('div');
+      floor.className = 'bedrock';
+      floor.innerHTML = '<div class="floor" style="margin-top:18px;">the ground holds nothing deeper here — yet. every day it gets a little older.</div>';
+      list.appendChild(floor);
+    } else {
+      var dz = document.createElement('div');
+      dz.className = 'digzone';
+      dz.innerHTML = '<button class="btn-ghost" id="digbtn">' +
+        '<span class="lbl"><span class="dl">how far down?<small>hold to dig — older is deeper, and harder to reach</small></span></span>' +
+        '<span class="hfill" id="digbtn-fill"></span></button>';
+      list.appendChild(dz);
+      makeHold('digbtn', 'digbtn-fill', 1100, null, function(){
+        state.dugMax[p.id] = Math.min(loadedMax(p) + 1, 6);
+        renderThread(p, state.dugMax[p.id]);
+        toast('you dug into ' + BANDS[state.dugMax[p.id]].label.split(' ·')[0] + ' — found voices ✓');
+      }, function(){ toast('keep holding — the ground gives way slowly'); });
+    }
+  }
+  function bubbleEl(p, v, bedrocked){
+    var b = document.createElement('div');
+    b.className = 'bubble ' + v.dir + (bedrocked ? ' bedrocked' : '');
+    b.setAttribute('data-vid', v.id);
+    if (v.chip){
+      var c = document.createElement('div');
+      c.className = 'chip' + (v.chipDone ? ' done' : '');
+      c.textContent = v.chip;
+      b.appendChild(c);
+    } else if (v.found){
+      var cf = document.createElement('div');
+      cf.className = 'chip';
+      cf.textContent = '◈ echo · found down here';
+      b.appendChild(cf);
+    }
+    var row = document.createElement('div');
+    row.className = 'brow';
+    var btn = document.createElement('button');
+    btn.className = 'pbtn'; btn.textContent = '▶';
+    var bars = document.createElement('span');
+    bars.className = 'bars'; bars.innerHTML = genBars(16, v.dur);
+    var dur = document.createElement('span');
+    dur.className = 'bdur'; dur.textContent = fmt(v.dur);
+    row.appendChild(btn); row.appendChild(bars); row.appendChild(dur);
+    btn.addEventListener('click', function(e){ e.stopPropagation(); playBars(btn, bars, v.dur); });
+    b.appendChild(row);
+    var meta = document.createElement('div');
+    meta.className = 'bmeta';
+    meta.textContent = v.meta;
+    b.appendChild(meta);
+    b.addEventListener('click', function(){ voiceDialog(p, v); });
+    return b;
+  }
+  function playBars(btn, bars, dur){
+    if (bars.classList.contains('live')) return;
+    bars.classList.add('live');
+    btn.textContent = '❚❚';
+    setTimeout(function(){ bars.classList.remove('live'); btn.textContent = '▶'; }, Math.min(dur, 6) * 1000);
+  }
+  function openPlace(p){
+    state.place = p;
+    $('place-name').textContent = p.name;
+    updateLive();
+    renderThread(p);
+    renderComposer(p);
+    show('scr-place');
+  }
+  function updateLive(){
+    var p = state.place;
+    $('place-rel').textContent = p.live > 0
+      ? '● ' + p.live + ' here right now · a count, never a coordinate'
+      : 'quiet right now · the place is yours';
+  }
+  function renderComposer(p){
+    var zone = $('composer-zone');
+    zone.innerHTML = '';
+    if (state.standing === p && state.locationOn){
+      var card = document.createElement('div');
+      card.className = 'composer';
+      card.innerHTML = '<button class="btn-primary" id="place-drop"><span class="lbl">hold to drop here</span><span class="hfill" id="place-drop-fill"></span></button>';
+      zone.appendChild(card);
+      makeHold('place-drop', 'place-drop-fill', 1000,
+        function(){ return state.locationOn; },
+        function(){ openDrop(p, null); },
+        function(){ toast('keep holding — a drop needs intent'); });
+    } else {
+      var ns = document.createElement('div');
+      ns.className = 'notstanding';
+      ns.textContent = !state.locationOn
+        ? 'location is off — it only works where you are'
+        : 'you\'re not standing here — it only works where you are';
+      zone.appendChild(ns);
+      var walk = document.createElement('button');
+      walk.className = 'walklink';
+      walk.textContent = 'prototype · tap to walk to this place';
+      walk.addEventListener('click', function(){
+        state.standing = p;
+        toast('you walked to ' + p.name);
+        renderGround();
+        renderComposer(p);
+      });
+      zone.appendChild(walk);
+    }
+  }
+  $('place-back').addEventListener('click', back);
+  $('place-live').addEventListener('click', function(){
+    $('live-name').textContent = state.place.name;
+    renderLive();
+    show('scr-live');
+  });
+  $('place-info').addEventListener('click', function(){
+    var p = state.place;
+    openDialog(p.name, [
+      { name:'Moments', desc:p.moments + ' moments left here' },
+      { name:'Deepest', desc:p.deepest },
+      { name:'Live', desc:(p.live > 0 ? p.live + ' here right now' : 'quiet right now') + ' — a count, never a coordinate' },
+      { name:'You', desc:'your position never leaves this phone' }
+    ]);
+  });
+
+  /* voice dialog — answers, not likes */
+  function voiceDialog(p, v){
+    openDialog('a voice · 0:' + (v.dur < 10 ? '0' : '') + v.dur, [
+      { name:'▶ Play', desc:v.meta },
+      { name:'↳ Answer', desc:'your voice, in reply — they get the only push' },
+      { name:'Cancel', desc:'' }
+    ], function(name){
+      if (name === '▶ Play'){
+        var el = document.querySelector('[data-vid="' + v.id + '"]');
+        if (el) playBars(el.querySelector('.pbtn'), el.querySelector('.bars'), v.dur);
+      } else if (name === '↳ Answer'){
+        if (state.standing !== p || !state.locationOn){
+          toast('you can only answer where you stand — it only works where you are');
+        } else {
+          openDrop(p, v);
+        }
+      }
+    });
+  }
+
+  /* =============== 03 drop — hold, release = sunk =============== */
+  var DROP_MAX = 15;
+  var dropT0 = 0, dropHolding = false, dropRaf = null, dropDone = false;
+  var dropPlace = null, dropParent = null;
+
+  function openDrop(p, parent){
+    dropPlace = p; dropParent = parent || null;
+    dropDone = false; dropHolding = false;
+    $('drop-status').textContent = '● you\'re standing in ' + p.name;
+    $('drop-parent').style.display = dropParent ? 'block' : 'none';
+    $('drop-timer').textContent = '0:00 / 0:15';
+    $('drop-bars').classList.remove('live');
+    $('drop-pill').classList.remove('sunk');
+    $('drop-pill-lbl').textContent = 'hold to drop';
+    $('drop-pill-fill').style.transform = 'scaleX(0)';
+    var note = $('drop-note');
+    note.classList.remove('sunk');
+    note.innerHTML = 'let go and it sinks. it waits for whoever stands next.<br>no retakes — it\'s a moment, not a message';
+    show('scr-drop');
+  }
+  function dropStep(ts){
+    if (!dropHolding || dropDone) return;
+    var held = (ts - dropT0) / 1000;
+    var p = Math.min(1, held / DROP_MAX);
+    $('drop-pill-fill').style.transform = 'scaleX(' + p + ')';
+    $('drop-timer').textContent = fmt(Math.min(DROP_MAX, Math.round(held))) + ' / 0:15';
+    if (p >= 1){ sink(Math.round(DROP_MAX)); return; }
+    dropRaf = requestAnimationFrame(dropStep);
+  }
+  function dropBegin(e){
+    if (dropDone) return;
+    e.preventDefault();
+    dropHolding = true; dropT0 = performance.now();
+    $('drop-bars').classList.add('live');
+    dropRaf = requestAnimationFrame(dropStep);
+  }
+  function dropEnd(){
+    if (!dropHolding || dropDone) return;
+    dropHolding = false;
+    if (dropRaf) cancelAnimationFrame(dropRaf);
+    $('drop-bars').classList.remove('live');
+    var held = (performance.now() - dropT0) / 1000;
+    if (held < 1){
+      /* mistouch guard — under a second drops nothing */
+      $('drop-pill-fill').style.transition = 'transform .3s ease';
+      $('drop-pill-fill').style.transform = 'scaleX(0)';
+      setTimeout(function(){ $('drop-pill-fill').style.transition = 'none'; }, 320);
+      $('drop-timer').textContent = '0:00 / 0:15';
+      toast('too quick — nothing dropped');
+    } else {
+      sink(Math.max(1, Math.round(held)));
+    }
+  }
+  $('dropzone').addEventListener('mousedown', dropBegin);
+  $('dropzone').addEventListener('touchstart', dropBegin, {passive:false});
+  window.addEventListener('mouseup', function(){ if (dropHolding) dropEnd(); });
+  $('dropzone').addEventListener('touchend', function(){ if (dropHolding) dropEnd(); });
+  $('drop-back').addEventListener('click', function(){ back(); });
+
+  function sink(dur){
+    dropDone = true; dropHolding = false;
+    if (dropRaf) cancelAnimationFrame(dropRaf);
+    $('drop-bars').classList.remove('live');
+    $('drop-pill-fill').style.transform = 'scaleX(1)';
+    $('drop-pill').classList.add('sunk');
+    $('drop-pill-lbl').textContent = '✓ sunk';
+    var note = $('drop-note');
+    note.classList.add('sunk');
+    note.textContent = 'sunk — it waits for whoever stands next';
+
+    /* the write: local, always succeeds (P5) */
+    var p = dropPlace;
+    var nv = { dir:'out', dur:dur, band:0, meta:'just now',
+               chip:'✓ sunk · it waits for whoever stands next', chipDone:true };
+    if (dropParent){
+      nv.chip = '✓ sunk · an answer';
+      nv.meta = 'just now · an answer';
+      dropParent.chip = 'an answer';
+    }
+    nv.id = p.id + '-new' + (p.voices.length + 1);
+    p.voices.unshift(nv);
+    p.moments++;
+    toast(dropParent
+      ? 'push sent: "someone answered you at ' + p.name + '" — the only one there is'
+      : 'sunk ✓ — it waits for whoever stands next');
+
+    setTimeout(function(){
+      var prev = state.stack[state.stack.length - 2];
+      back();
+      if (prev === 'scr-place'){
+        renderThread(p, 0);
+        renderComposer(p);
+        $('msg-scroll').scrollTop = 0;
+      } else {
+        renderGround();
+      }
+      /* reset ring for next time */
+      dropDone = false;
+    }, 1200);
+  }
+
+  /* =============== 05 live =============== */
+  var liveFeed = [
+    { txt:'someone just dropped 12 seconds', t:'now' },
+    { txt:'a voice landed at the surface', t:'4 m' },
+    { txt:'the evening rush began', t:'38 m' },
+    { txt:'a voice settled into settling', t:'2 h' },
+    { txt:'the place went quiet', t:'6 h' },
+    { txt:'a voice crossed into sediment', t:'1 d' }
+  ];
+  var LIVE_EVENTS = [
+    'someone just dropped 15 seconds',
+    'a voice landed and sank',
+    'two people arrived together',
+    'someone found a voice from march, deep down',
+    'the place is filling up',
+    'a voice answered another'
+  ];
+  function renderLive(){
+    var p = state.place;
+    if (!p) return;
+    $('live-n').textContent = p.live;
+    var tk = $('ticker');
+    tk.innerHTML = '';
+    liveFeed.forEach(function(ev, i){
+      var row = document.createElement('div');
+      row.className = 'tick';
+      row.innerHTML = '<span class="ttxt"></span><span class="ttime"></span>';
+      var tx = row.querySelector('.ttxt');
+      tx.textContent = ev.txt;
+      if (i >= 3) tx.className = 'ttxt old';
+      row.querySelector('.ttime').textContent = ev.t;
+      tk.appendChild(row);
+    });
+  }
+  $('live-back').addEventListener('click', back);
+  setInterval(function(){
+    PLACES.forEach(function(p){
+      if (p.live > 0){
+        p.live = Math.max(0, p.live + (Math.random() < .5 ? -1 : 1));
+        if (p === state.place) updateLive();
+      }
+    });
+    if ($('scr-live').classList.contains('active')){
+      if (state.place) $('live-n').textContent = state.place.live;
+      liveFeed.forEach(function(ev){ if (ev.t === 'now') ev.t = '1 m'; });
+      liveFeed.unshift({ txt:LIVE_EVENTS[Math.floor(Math.random() * LIVE_EVENTS.length)], t:'now' });
+      while (liveFeed.length > 8) liveFeed.pop();
+      renderLive();
+    }
+    if ($('scr-ground').classList.contains('active')) renderGround();
+  }, 9000);
+
+  /* =============== settings =============== */
+  $('set-back').addEventListener('click', back);
+  $('myplaces-row').addEventListener('click', function(){ renderMyGround(); show('scr-myground'); });
+  $('deepest-row').addEventListener('click', function(){ openPlace(PLACES[3]); });
+  $('notif-row').addEventListener('click', function(){
+    openDialog('Notifications', [
+      { name:'Answers', desc:'"someone answered you at ⟨place⟩" — the only social push there will ever be' },
+      { name:'Anniversaries', desc:'"one year ago, you stood here"' },
+      { name:'Nothing else', desc:'no badges, no streaks, no noise. both only fire at places you\'ve seeded.' }
+    ]);
+  });
+  $('data-row').addEventListener('click', function(){
+    openDialog('Data & storage', [
+      { name:'On this device', desc:'every voice, stored where it was dropped' },
+      { name:'Location', desc:'your position never leaves this phone' },
+      { name:'Offline', desc:'a drop always succeeds — sync waits for signal' }
+    ]);
+  });
+  $('about-row').addEventListener('click', function(){
+    openDialog('About', [
+      { name:'how far 1.0 (build 1)', desc:'the ground remembers what people left where they stood' },
+      { name:'Place memory', desc:'voices live at places, not on servers' },
+      { name:'Live counts', desc:'a count, never a coordinate' },
+      { name:'Wherever you are', desc:'est. wherever you are' }
+    ]);
+  });
+  document.querySelectorAll('#settings-root .row[data-toast]').forEach(function(r){
+    r.addEventListener('click', function(){ toast(r.getAttribute('data-toast')); });
+  });
+  function wireToggle(rowId, swId, onMsg, offMsg){
+    $(rowId).addEventListener('click', function(){
+      var sw = $(swId);
+      sw.classList.toggle('on');
+      toast(sw.classList.contains('on') ? onMsg : offMsg);
+    });
+  }
+  wireToggle('alerts-trow', 'alerts-sw', 'Standing alerts on', 'Standing alerts off');
+  wireToggle('ghost-trow', 'ghost-sw', 'Ghost mode on — you\'re invisible in live counts', 'Ghost mode off');
+  wireToggle('livecount-trow', 'livecount-sw', 'Live counts on', 'Live counts hidden');
+  var PRECISION = [
+    { name:'Block', desc:'shows the neighbourhood, never the corner', ex:'e.g. "somewhere in rumuokoro"' },
+    { name:'Street', desc:'shows the street you\'re standing on', ex:'e.g. "on market road"' },
+    { name:'Exact', desc:'the place itself — needed to drop voices', ex:'e.g. "at the junction"' }
+  ];
+  $('precision-row').addEventListener('click', function(){
+    openDialog('Location precision', PRECISION.map(function(o, i){
+      return { name:o.name, desc:o.desc + ' — ' + o.ex, current:i === state.precision, pick:i };
+    }), function(name, idx){
+      state.precision = idx;
+      $('precision-sub').textContent = 'active: ' + name.toLowerCase() +
+        (idx === 2 ? ' · voices can be dropped ✓' : ' · browse only, no dropping');
+    });
+  });
+
+  /* =============== 04 my ground =============== */
+  $('mg-back').addEventListener('click', back);
+  function renderMyGround(){
+    var mine = PLACES.filter(seeded);
+    var myMoments = 0, deepestIdx = -1;
+    PLACES.forEach(function(p){
+      p.voices.forEach(function(v){
+        if (v.dir === 'out'){ myMoments++; deepestIdx = Math.max(deepestIdx, v.band); }
+      });
+    });
+    $('mg-stats').innerHTML =
+      '<div class="stat"><b>' + mine.length + '</b><span>places</span></div>' +
+      '<div class="stat"><b>' + myMoments + '</b><span>moments</span></div>' +
+      '<div class="stat"><b>' + (deepestIdx >= 0 ? BANDS[deepestIdx].label.split(' ·')[0] : '—') + '</b><span>deepest</span></div>';
+    var list = $('mg-list');
+    list.innerHTML = '';
+    mine.forEach(function(p, i){
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div class="c"><div class="t"></div><div class="s"></div></div><span class="chev">›</span>';
+      row.querySelector('.t').textContent = p.name;
+      var mineCount = p.voices.filter(function(v){ return v.dir === 'out'; }).length;
+      row.querySelector('.s').textContent = 'yours · ' + mineCount + (mineCount === 1 ? ' moment' : ' moments') +
+        ' · deepest ' + p.deepest + (answered(p) ? ' · ◈ someone answered you' : '');
+      row.addEventListener('click', function(){ openPlace(p); });
+      list.appendChild(row);
+      if (i < mine.length - 1){
+        var d = document.createElement('div'); d.className = 'divider'; list.appendChild(d);
+      }
+    });
+    $('myplaces-sub').textContent = mine.length + ' places · ' + myMoments + ' of your moments';
+  }
+
+  /* =============== dialog (kit) =============== */
+  var dialogCb = null;
+  function openDialog(title, items, cb){
+    dialogCb = cb || null;
+    var d = $('dialog');
+    var html = '<div class="dtitle"></div>';
+    items.forEach(function(it, i){
+      html += '<div class="pick' + (it.current ? ' cur' : '') + '" data-name="' + it.name.replace(/"/g, '') + '"' +
+              (typeof it.pick === 'number' ? ' data-pick="' + it.pick + '"' : '') + '>' +
+              '<div class="ph">' + (it.current ? '✓ ' : '') + it.name + '</div>' +
+              (it.desc ? '<div class="pd">' + it.desc + '</div>' : '') +
+              '</div>';
+      if (i < items.length - 1) html += '<div class="divider"></div>';
+    });
+    html += '<button class="btn sm dlg-close">Cancel</button>';
+    d.innerHTML = html;
+    d.querySelector('.dtitle').textContent = title;
+    d.querySelectorAll('.pick').forEach(function(pk){
+      pk.addEventListener('click', function(){
+        if (dialogCb){
+          var idx = pk.getAttribute('data-pick');
+          dialogCb(pk.getAttribute('data-name'), idx !== null ? parseInt(idx, 10) : 0);
+        }
+        closeDialog();
+      });
+    });
+    d.querySelector('.dlg-close').addEventListener('click', closeDialog);
+    $('overlay').classList.add('show');
+  }
+  function closeDialog(){ $('overlay').classList.remove('show'); dialogCb = null; }
+  $('overlay').addEventListener('click', function(e){ if (e.target === this) closeDialog(); });
+
+  /* =============== boot =============== */
+  PLACES.forEach(function(p){ p.voices.forEach(function(v, i){ v.id = p.id + '-v' + i; }); });
+  renderGround();
+})();
+</script>
+</body>
+</html>

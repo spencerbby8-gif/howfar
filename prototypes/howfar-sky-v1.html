@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>how far — the sky</title>
+<style>
+/* ================================================================
+   how far — the sky · prototype v1 (2 Oct 2026)
+   Concept: stories are light. posting is release. distance is the feed.
+     home = a zoomable night sky (no feed, no avatar row, no bars)
+     story = warp in, bloom open, fuse burns down, drifts on
+     like = a flare (travels, no count) · reply = a shooting star
+     discovery = the horizon, by distance, with receipts
+   Visual rule (owner, 2 Oct): the sky + viewer get their own visual
+   language; the ground + settings stay 100% ReplyMate kit.
+   The ONLY other brand visual: the how far logo.
+   ================================================================ */
+:root{
+  --bg:#0D1117; --card:#161B22; --accent:#0A84FF; --text:#FFFFFF; --dim:#AAB2BD;
+  --green:#3FB950; --stroke:#2A3139;
+  --sky1:#04070F; --sky2:#0A1220; --sky3:#0D1117;
+  --flare:#FF4A1C; --volt:#C6FF3D;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%; margin:0;}
+body{background:#000; font-family:Roboto,"Helvetica Neue",-apple-system,"Segoe UI",Arial,sans-serif;
+  color:var(--text); font-size:14px; overflow:hidden;}
+#frame{max-width:480px; height:100dvh; margin:0 auto; background:var(--sky1);
+  position:relative; overflow:hidden; display:flex; flex-direction:column;}
+
+/* status bar (kit) */
+#statusbar{flex:none; height:30px; display:flex; justify-content:space-between; align-items:center;
+  padding:0 16px; font-size:12px; color:rgba(255,255,255,.85); background:transparent; z-index:30; position:relative;}
+#statusbar .sicons{display:flex; align-items:center; gap:6px;}
+.sig{display:flex; align-items:flex-end; gap:1.5px; height:11px;}
+.sig i{width:2.5px; background:rgba(255,255,255,.85); border-radius:.5px;}
+.sig i:nth-child(1){height:4px;} .sig i:nth-child(2){height:6.5px;} .sig i:nth-child(3){height:9px;} .sig i:nth-child(4){height:11px;}
+.batt{width:20px; height:10px; border:1px solid rgba(255,255,255,.6); border-radius:2.5px; position:relative;}
+.batt::after{content:""; position:absolute; inset:1.5px 6px 1.5px 1.5px; background:rgba(255,255,255,.85);}
+
+#screens{flex:1; position:relative; overflow:hidden;}
+.screen{position:absolute; inset:0; display:none; flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ================================================================
+   THE SKY (custom visual language)
+   ================================================================ */
+#scr-sky{background:
+  radial-gradient(120% 90% at 50% 110%, #0E1B33 0%, rgba(14,27,51,0) 55%),
+  radial-gradient(90% 70% at 50% -10%, #101A2E 0%, rgba(16,26,46,0) 60%),
+  linear-gradient(180deg, var(--sky1) 0%, var(--sky2) 60%, var(--sky3) 100%);}
+#sky-canvas{position:absolute; inset:0; width:100%; height:100%; transition:transform .6s cubic-bezier(.2,.8,.2,1);}
+#sky-stage{position:absolute; inset:0; transition:transform .6s cubic-bezier(.2,.8,.2,1);}
+#scr-sky[data-scope="city"] #sky-stage{transform:scale(.86);}
+#scr-sky[data-scope="world"] #sky-stage{transform:scale(.72);}
+#scr-sky[data-scope="city"] #sky-canvas{transform:scale(1.12);}
+#scr-sky[data-scope="world"] #sky-canvas{transform:scale(1.28);}
+
+/* constellation lines — your circle, drawn as astronomy */
+#constellation{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
+  transition:opacity .5s;}
+#scr-sky[data-scope="near"] #constellation{opacity:1;}
+#scr-sky[data-scope="city"] #constellation, #scr-sky[data-scope="world"] #constellation{opacity:0;}
+#constellation line{stroke:rgba(10,132,255,.16); stroke-width:1;}
+
+/* lights = people with stories */
+.light{position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column;
+  align-items:center; gap:7px; cursor:pointer; z-index:5; user-select:none; transition:opacity .5s;}
+.light .orb{width:34px; height:34px; border-radius:50%; position:relative;
+  background:radial-gradient(circle at 38% 34%, #BFE0FF 0%, #6FB6FF 34%, #0A84FF 68%, #05478F 100%);
+  box-shadow:0 0 14px 2px rgba(10,132,255,.5), 0 0 42px 8px rgba(10,132,255,.16);
+  animation:breathe 2.4s ease-in-out infinite;}
+.light.fresh .orb{animation-duration:1.6s;
+  background:radial-gradient(circle at 38% 34%, #FFFFFF 0%, #9CCFFF 30%, #0A84FF 66%, #0561B0 100%);
+  box-shadow:0 0 18px 4px rgba(10,132,255,.65), 0 0 64px 14px rgba(10,132,255,.22);}
+.light.dimlit .orb{opacity:.5; filter:saturate(.5);
+  box-shadow:0 0 10px 1px rgba(10,132,255,.22);}
+.light.you .orb{width:46px; height:46px;
+  background:radial-gradient(circle at 38% 34%, #FFF6E8 0%, #FFC49B 30%, #FF4A1C 64%, #B3300F 100%);
+  box-shadow:0 0 16px 3px rgba(255,74,28,.5), 0 0 56px 12px rgba(255,74,28,.16);}
+.light .lname{font-size:11px; color:rgba(255,255,255,.62); letter-spacing:.02em;
+  text-shadow:0 1px 6px rgba(0,0,0,.8);}
+.light .lwhen{font-size:9px; color:rgba(255,255,255,.3);}
+.light.flared .orb{animation:flaredpulse 1.2s ease-out 2;
+  background:radial-gradient(circle at 38% 34%, #FFFFFF 0%, #FFD9C4 30%, #FF4A1C 64%, #B3300F 100%) !important;
+  box-shadow:0 0 26px 8px rgba(255,74,28,.7), 0 0 80px 20px rgba(255,74,28,.28) !important;}
+.light.bright .orb{background:radial-gradient(circle at 38% 34%, #FFFFFF 0%, #D9FF8A 30%, #C6FF3D 60%, #6E9414 100%) !important;
+  box-shadow:0 0 22px 5px rgba(198,255,61,.55), 0 0 70px 16px rgba(198,255,61,.2) !important;}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes flaredpulse{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+
+/* far lights — the horizon, dim strangers */
+.far-light{position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column;
+  align-items:center; gap:6px; cursor:pointer; z-index:4; opacity:0; pointer-events:none;
+  transition:opacity .6s;}
+.far-light .orb{width:20px; height:20px; border-radius:50%; opacity:.75;
+  background:radial-gradient(circle at 40% 35%, #CDE4FF 0%, #7FBBFF 40%, #2C6FC4 100%);
+  box-shadow:0 0 10px 2px rgba(10,132,255,.3);}
+.far-light .fname{font-size:9px; color:rgba(255,255,255,.42); text-align:center; line-height:1.45;
+  text-shadow:0 1px 6px rgba(0,0,0,.8); white-space:nowrap;}
+.far-light .fname b{display:block; font-weight:400; color:rgba(255,255,255,.55);}
+.far-light .fname i{font-style:normal; color:rgba(255,255,255,.3); font-size:8px;}
+.far-light.flared .orb{animation:flaredpulse 1.2s ease-out 2;
+  box-shadow:0 0 24px 8px rgba(255,74,28,.6) !important;}
+#scr-sky[data-scope="city"] .far-light[data-tier="city"],
+#scr-sky[data-scope="world"] .far-light{opacity:1; pointer-events:auto;}
+#scr-sky.nohorizon .far-light{opacity:0 !important; pointer-events:none !important;}
+
+/* a light is coming — anticipation, not a notification */
+#incoming{position:absolute; right:7%; top:16%; display:flex; align-items:center; gap:8px;
+  z-index:6; opacity:0; pointer-events:none; transition:opacity .6s;}
+#scr-sky[data-scope="near"] #incoming, #scr-sky[data-scope="city"] #incoming{opacity:1;}
+#scr-sky.noarrivals #incoming{opacity:0 !important;}
+#incoming .dot{width:10px; height:10px; border-radius:50%;
+  background:radial-gradient(circle at 40% 35%, #EAF4FF 0%, #9CCFFF 50%, #2C6FC4 100%);
+  box-shadow:0 0 12px 3px rgba(10,132,255,.5); animation:breathe 1.6s ease-in-out infinite;}
+#incoming .inc-label{font-size:9px; color:rgba(255,255,255,.5); line-height:1.5; text-align:right;}
+#incoming .inc-label b{display:block; color:rgba(255,255,255,.72); font-weight:500;}
+#incoming .inc-label i{font-style:normal; color:rgba(255,255,255,.32);}
+
+/* sky chrome */
+#sky-head{position:absolute; top:38px; left:0; right:0; display:flex; align-items:center;
+  padding:0 16px; z-index:10; pointer-events:none;}
+#sky-head .tt{flex:1; display:flex; align-items:center; gap:9px;}
+#sky-head .sub{font-size:11px; color:rgba(255,255,255,.5); margin:0;}
+.gear{font-size:24px; color:var(--dim); padding:8px; cursor:pointer; background:none; border:none;
+  font-family:inherit; pointer-events:auto;}
+#sky-status{position:absolute; left:16px; bottom:118px; font-size:12px; color:var(--green); z-index:10;
+  text-shadow:0 1px 8px rgba(0,0,0,.8); max-width:52%; line-height:1.5;}
+#scope-btn{position:absolute; right:16px; bottom:56px; z-index:10; background:none; border:none;
+  color:rgba(255,255,255,.45); font-family:inherit; font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; cursor:pointer; padding:8px; text-shadow:0 1px 8px rgba(0,0,0,.9);}
+#scope-btn b{display:block; color:rgba(255,255,255,.85); font-weight:700; font-size:13px; margin-top:2px;}
+#scope-hint{position:absolute; left:0; right:0; bottom:34px; text-align:center; font-size:9px;
+  color:rgba(255,255,255,.25); z-index:9; pointer-events:none;}
+#release-btn{position:absolute; left:50%; bottom:64px; transform:translateX(-50%); z-index:11;
+  width:58px; height:58px; border-radius:50%; border:none; cursor:pointer;
+  background:radial-gradient(circle at 36% 32%, #4DA3FF 0%, var(--accent) 55%, #0561B0 100%);
+  box-shadow:0 0 22px 4px rgba(10,132,255,.4); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:1px; color:#fff; font-family:inherit;}
+#release-btn:active{transform:translateX(-50%) scale(.94);}
+#release-btn .ric{font-size:18px; line-height:1;}
+#release-btn .rlbl{font-size:8px; letter-spacing:.14em; text-transform:uppercase; opacity:.85;}
+.logo{display:inline-block; vertical-align:middle;}
+.logo .ldot{transform-box:fill-box; transform-origin:center; animation:ldot 2.4s ease-in-out infinite;}
+@keyframes ldot{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+
+/* warp — entry to a story: the sky streaks past you */
+#warp{position:absolute; inset:0; z-index:40; pointer-events:none; opacity:0;
+  background:radial-gradient(circle at 50% 50%, rgba(10,132,255,.0) 30%, rgba(10,132,255,.24) 72%, rgba(10,132,255,.55) 100%);}
+#warp.play{animation:warp .42s ease-in;}
+@keyframes warp{0%{opacity:0; transform:scale(.4)}55%{opacity:1}100%{opacity:0; transform:scale(1.9)}}
+
+/* ================================================================
+   THE BLOOM — story viewer (custom visual language)
+   ================================================================ */
+#scr-bloom{background:var(--sky1); overflow:hidden; touch-action:none;}
+#bloom-stage{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
+#bloom-media{position:relative; width:86%; max-width:400px; aspect-ratio:9/14; border-radius:22px;
+  overflow:hidden; display:flex; align-items:flex-end; padding:18px;
+  box-shadow:0 0 60px 18px rgba(10,132,255,.14), 0 0 140px 40px rgba(10,132,255,.07);
+  animation:bloomin .38s cubic-bezier(.2,1.35,.3,1) both;}
+@keyframes bloomin{0%{transform:scale(.22); filter:blur(24px); opacity:0;}
+  70%{filter:blur(0); opacity:1;}100%{transform:scale(1); filter:blur(0); opacity:1;}}
+#bloom-media.drift-out{animation:driftout .6s ease-in both;}
+@keyframes driftout{to{transform:translateY(-46%) rotate(3deg); opacity:0; filter:blur(8px);}}
+#bloom-media.drift-in{animation:driftin .6s ease-out both;}
+@keyframes driftin{from{transform:translateY(52%) rotate(-2deg); opacity:0; filter:blur(8px);}
+  to{transform:none; opacity:1; filter:blur(0);}}
+#bloom-media.pullback{animation:pullback .45s cubic-bezier(.3,1.3,.4,1) both;}
+@keyframes pullback{0%{transform:translateY(0)}45%{transform:translateY(12%)}100%{transform:translateY(0)}}
+.toneA{background:linear-gradient(165deg, #14304F 0%, #0B1E38 48%, #071120 100%);}
+.toneB{background:linear-gradient(165deg, #1B2440 0%, #0E1630 50%, #070D1D 100%);}
+.toneC{background:linear-gradient(165deg, #12303B 0%, #0A1E28 52%, #06121A 100%);}
+.toneD{background:linear-gradient(165deg, #10141C 0%, #0A0E16 55%, #05080D 100%);}
+.toneE{background:linear-gradient(165deg, #251830 0%, #150E22 55%, #08060F 100%);}
+#bloom-cap{font-size:16px; line-height:1.5; color:rgba(255,255,255,.9); max-width:82%;}
+#bloom-who{position:absolute; top:14px; left:18px; font-size:11px; color:rgba(255,255,255,.5);}
+#bloom-when{position:absolute; top:14px; right:18px; font-size:11px; color:rgba(255,255,255,.35);}
+/* the fuse — a halo that burns down. no bars, no numbers. */
+#fuse{position:absolute; left:50%; bottom:16px; transform:translateX(-50%); width:96px; height:96px;
+  pointer-events:none; opacity:.95;}
+#fuse .track{fill:none; stroke:rgba(255,255,255,.08); stroke-width:2;}
+#fuse .arc{fill:none; stroke:var(--accent); stroke-width:2.5; stroke-linecap:round;
+  filter:drop-shadow(0 0 5px rgba(10,132,255,.8));}
+#bloom-hint{position:absolute; left:0; right:0; bottom:26px; text-align:center; font-size:9px;
+  color:rgba(255,255,255,.28); pointer-events:none; letter-spacing:.04em;}
+#bloom-close{position:absolute; top:40px; right:14px; z-index:12; background:none; border:none;
+  color:rgba(255,255,255,.5); font-size:22px; cursor:pointer; font-family:inherit; padding:10px;}
+/* anchor glow — the sky obeys your hand */
+#anchor-glow{position:absolute; width:70px; height:70px; border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 70%);
+  opacity:0; transition:opacity .15s; z-index:11; transform:translate(-50%,-50%);}
+#scr-bloom.anchored #anchor-glow{opacity:1;}
+#scr-bloom.anchored #bloom-media{filter:brightness(.82);}
+/* ignition — the flare */
+#ignite{position:absolute; width:12px; height:12px; border-radius:50%; pointer-events:none; z-index:12;
+  transform:translate(-50%,-50%); background:radial-gradient(circle, #FFF 0%, #FFB08A 40%, var(--flare) 75%);
+  box-shadow:0 0 18px 6px rgba(255,74,28,.65); opacity:0;}
+#ignite.fired{animation:ignite .6s ease-out both;}
+@keyframes ignite{0%{opacity:0; transform:translate(-50%,-50%) scale(.4);}
+  35%{opacity:1; transform:translate(-50%,-50%) scale(2.6);}
+  100%{opacity:0; transform:translate(-50%,-50%) scale(4);}}
+/* reply — kit button, sky placement */
+#bloom-actions{position:absolute; left:0; right:0; bottom:64px; display:flex; justify-content:center; z-index:11;}
+.skybtn{background:rgba(22,27,34,.72); border:1px solid rgba(255,255,255,.14); color:#fff;
+  font-family:inherit; font-size:13px; font-weight:500; border-radius:22px; padding:11px 20px;
+  cursor:pointer; backdrop-filter:blur(6px);}
+.skybtn:active{background:rgba(22,27,34,.95);}
+/* reply recorder */
+#reply-strip{position:absolute; left:14px; right:14px; bottom:20px; z-index:13; display:none;
+  background:rgba(22,27,34,.9); border:1px solid var(--stroke); border-radius:16px; padding:14px;}
+#reply-strip.show{display:block;}
+#reply-strip .rl{font-size:11px; color:var(--dim); margin-bottom:9px;}
+.skyhold{position:relative; display:block; width:100%; background:var(--accent); border:none; color:#fff;
+  font-family:inherit; font-size:15px; font-weight:700; min-height:48px; border-radius:14px;
+  cursor:pointer; overflow:hidden; user-select:none; touch-action:none;}
+.skyhold .lbl{position:relative; z-index:2;}
+.skyhold .hfill{position:absolute; inset:0; background:#0871d8; transform-origin:left; transform:scaleX(0); z-index:1;}
+.skyhold.sunk{background:var(--green);}
+
+/* ================================================================
+   RELEASE — capture + launch (custom)
+   ================================================================ */
+#scr-release{background:var(--sky1); overflow:hidden;}
+#release-cap{position:absolute; left:7%; right:7%; top:86px; bottom:210px; border-radius:22px;
+  display:flex; align-items:flex-end; padding:18px;
+  box-shadow:0 0 60px 14px rgba(10,132,255,.1);}
+#rel-holdzone{position:absolute; left:16px; right:16px; bottom:26px; z-index:5;}
+#rel-holdzone .rl{font-size:11px; color:var(--dim); text-align:center; margin-bottom:9px;}
+#release-orb{position:absolute; left:50%; bottom:150px; transform:translateX(-50%); width:44px; height:44px;
+  border-radius:50%; opacity:0; pointer-events:none;
+  background:radial-gradient(circle at 38% 34%, #FFF 0%, #9CCFFF 32%, #0A84FF 66%, #0561B0 100%);
+  box-shadow:0 0 20px 5px rgba(10,132,255,.55), 0 0 60px 14px rgba(10,132,255,.2);
+  transition:opacity .4s;}
+#release-orb.formed{opacity:1; animation:breathe 1.6s ease-in-out infinite;}
+#release-orb.launch{animation:launch .9s cubic-bezier(.3,.1,.4,1) both;}
+@keyframes launch{0%{transform:translateX(-50%) translateY(0) scale(1); opacity:1;}
+  100%{transform:translateX(-50%) translateY(-72vh) scale(.14); opacity:0;}}
+#launch-trail{position:absolute; left:50%; bottom:150px; width:2px; height:0; z-index:4;
+  background:linear-gradient(180deg, rgba(10,132,255,0), rgba(10,132,255,.7));
+  opacity:0; pointer-events:none;}
+#launch-trail.go{animation:trail .9s ease-out both;}
+@keyframes trail{0%{height:0; opacity:.9;}100%{height:56vh; opacity:0;}}
+#release-back{position:absolute; top:40px; left:14px; z-index:12; background:none; border:none;
+  color:rgba(255,255,255,.5); font-size:22px; cursor:pointer; font-family:inherit; padding:10px;}
+#letgo-btn{display:none; margin-top:10px;}
+#letgo-btn.show{display:block;}
+
+/* comet — a reply crossing the sky */
+#comet{position:absolute; width:13px; height:13px; border-radius:50%; z-index:45; pointer-events:none;
+  background:radial-gradient(circle at 40% 35%, #FBFFE3 0%, #E4FF8F 40%, var(--volt) 80%);
+  box-shadow:0 0 16px 5px rgba(198,255,61,.6), -22px 0 34px -8px rgba(198,255,61,.45);}
+#comet::after{content:""; position:absolute; right:70%; top:50%; width:64px; height:2px;
+  transform:translateY(-50%); background:linear-gradient(270deg, rgba(198,255,61,.8), rgba(198,255,61,0));
+  border-radius:2px;}
+
+/* ================================================================
+   KIT PARTS — splash · ground · settings · toast · dialog (ReplyMate)
+   ================================================================ */
+.p20{padding:20px;}
+.h1{font-size:24px; font-weight:700; margin:0;}
+.h1.backlink{cursor:pointer; display:inline-block;}
+.sub{font-size:12px; color:var(--dim); margin:2px 0 0;}
+.statusline{font-size:12px; margin-top:10px; cursor:default;}
+.statusline.ok{color:var(--green);}
+.privacyline{font-size:11px; color:var(--dim); margin-top:6px;}
+.btn{display:block; width:100%; background:#3E4448; border:none; color:var(--text);
+  font-family:inherit; font-size:14px; font-weight:500; text-transform:uppercase; letter-spacing:.03em;
+  padding:13px 16px; border-radius:2px; cursor:pointer; margin-top:16px;}
+.btn:active{background:#33393d;}
+.btn.sm{margin-top:0; padding:12px 14px; font-size:13px; width:auto;}
+.row{display:flex; align-items:center; padding:14px 0; cursor:pointer;}
+.row .c{flex:1; min-width:0;}
+.row .t{font-size:16px;}
+.row .s{font-size:13px; color:var(--dim); margin-top:2px;}
+.row .chev{font-size:22px; color:var(--dim); font-weight:400; flex:none; margin-left:8px;}
+.divider{height:1px; background:var(--stroke);}
+.label{font-size:12px; color:var(--dim); padding:12px 0 4px;}
+.trow{display:flex; align-items:center; padding:10px 4px 10px 0; cursor:pointer;}
+.trow .c{flex:1; min-width:0;}
+.trow .t{font-size:16px;}
+.trow .s{font-size:13px; color:var(--dim); margin-top:2px;}
+.sw{flex:none; width:38px; height:20px; border-radius:20px; background:#3a4046; position:relative;
+  margin-left:12px; transition:background .15s;}
+.sw::after{content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
+  background:#fff; transition:left .15s;}
+.sw.on{background:var(--accent);}
+.sw.on::after{left:20px;}
+.card{background:var(--card); border-radius:12px; padding:14px;}
+.bandhead{font-size:12px; color:var(--dim); letter-spacing:.08em; text-transform:uppercase; margin:18px 0 2px;}
+.statrow{display:flex; gap:9px; margin-top:14px;}
+.stat{flex:1; text-align:center; padding:13px 6px 11px; background:var(--card); border-radius:12px;}
+.stat b{display:block; font-size:22px; font-weight:700;}
+.stat span{display:block; font-size:12px; color:var(--dim); margin-top:3px;}
+.scroll{flex:1; overflow-y:auto; min-height:0;}
+.scroll::-webkit-scrollbar{width:0;}
+
+/* splash (kit) */
+#scr-splash{background:var(--bg); align-items:center; justify-content:center; text-align:center;}
+.splash-wrap{position:relative; width:170px; height:170px; display:flex; align-items:center; justify-content:center;}
+.splash-glow{position:absolute; inset:-45px; border-radius:50%;
+  background:radial-gradient(circle, rgba(10,132,255,.22) 0%, rgba(10,132,255,.1) 45%, rgba(10,132,255,0) 72%);}
+.splash-ring{position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(10,132,255,.4);}
+#scr-splash .h1{margin-top:20px;}
+
+/* ground + settings (kit screens) */
+#scr-ground, #scr-settings{background:var(--bg);}
+.nofollow{font-size:11px; color:var(--dim); text-align:center; padding:16px 0 4px;}
+
+/* toast + dialog (kit) */
+#toast{position:absolute; left:50%; bottom:88px; transform:translateX(-50%) translateY(8px);
+  background:#22272e; color:#fff; font-size:13px; padding:10px 18px; border-radius:22px;
+  opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; z-index:60; white-space:nowrap; max-width:92%;}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+#overlay{position:absolute; inset:0; background:rgba(0,0,0,.6); display:none; z-index:50;
+  align-items:center; justify-content:center; padding:28px;}
+#overlay.show{display:flex;}
+.dialog{background:#1a1f26; border-radius:4px; padding:18px 16px 10px; width:100%; max-width:340px;
+  max-height:80%; overflow-y:auto;}
+.dialog .dtitle{font-size:18px; font-weight:700; margin-bottom:8px;}
+.pick{padding:10px 0; cursor:pointer;}
+.pick .ph{font-size:16px;}
+.pick.cur .ph{color:var(--accent); font-weight:700;}
+.pick .pd{font-size:13px; color:var(--dim); margin-top:2px;}
+.dlg-close{width:auto; margin:10px 0 4px; align-self:flex-end; padding:8px 16px;}
+</style>
+</head>
+<body>
+<div id="frame">
+
+  <div id="statusbar">
+    <span id="clock">19:42</span>
+    <span class="sicons">
+      <span class="sig"><i></i><i></i><i></i><i></i></span>
+      <span style="font-size:10px;">5G</span>
+      <span class="batt"></span>
+    </span>
+  </div>
+
+  <div id="screens">
+
+    <!-- 00 SPLASH (kit) -->
+    <section class="screen active" id="scr-splash">
+      <div class="splash-wrap">
+        <div class="splash-glow"></div>
+        <div class="splash-ring"></div>
+        <svg class="logo" width="86" height="77" viewBox="0 0 112 100" aria-label="how far">
+          <g transform="translate(8,-7)">
+            <circle cx="40" cy="58" r="24" fill="none" stroke="#C6FF3D" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+            <circle cx="88" cy="24" r="11" fill="#C6FF3D"/>
+          </g>
+          <circle cx="40" cy="58" r="24" fill="none" stroke="#FF4A1C" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+          <circle class="ldot" cx="88" cy="24" r="11" fill="#FF4A1C"/>
+        </svg>
+      </div>
+      <h1 class="h1">how far</h1>
+      <p class="sub">stories are light</p>
+    </section>
+
+    <!-- 01 THE SKY -->
+    <section class="screen" id="scr-sky" data-scope="near">
+      <canvas id="sky-canvas"></canvas>
+      <svg id="constellation"></svg>
+      <div id="sky-stage"></div>
+
+      <div id="incoming">
+        <div class="inc-label"><b>a light from london</b><i>arrives in <span id="inc-mins">38</span> min</i></div>
+        <div class="dot"></div>
+      </div>
+
+      <div id="sky-head">
+        <div class="tt">
+          <svg class="logo" width="24" height="21" viewBox="0 0 112 100" aria-hidden="true">
+            <g transform="translate(8,-7)"><circle cx="40" cy="58" r="24" fill="none" stroke="#C6FF3D" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/><circle cx="88" cy="24" r="11" fill="#C6FF3D"/></g>
+            <circle cx="40" cy="58" r="24" fill="none" stroke="#FF4A1C" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+            <circle cx="88" cy="24" r="11" fill="#FF4A1C"/>
+          </svg>
+          <span class="h1" style="font-size:20px;">how far</span>
+          <p class="sub">the sky</p>
+        </div>
+        <button class="gear" id="gear-btn" aria-label="settings">⚙</button>
+      </div>
+
+      <div id="sky-status">● 4 lights up tonight · 1 traveling to you</div>
+      <button id="scope-btn">zoom<b id="scope-label">near sky</b></button>
+      <div id="scope-hint">pinch or tap zoom — near · city · world</div>
+      <button id="release-btn" aria-label="release a light"><span class="ric">✦</span><span class="rlbl">release</span></button>
+    </section>
+
+    <!-- 02 THE BLOOM — story viewer -->
+    <section class="screen" id="scr-bloom">
+      <div id="bloom-stage">
+        <div id="bloom-media">
+          <div id="bloom-who"></div>
+          <div id="bloom-when"></div>
+          <div id="bloom-cap"></div>
+          <svg id="fuse" viewBox="0 0 120 120">
+            <circle class="track" cx="60" cy="60" r="52"></circle>
+            <circle class="arc" id="fuse-arc" cx="60" cy="60" r="52"></circle>
+          </svg>
+        </div>
+      </div>
+      <div id="anchor-glow"></div>
+      <div id="ignite"></div>
+      <div id="bloom-hint">touch to anchor · flick to throw · pull down to rewind · hold to flare</div>
+      <button id="bloom-close" aria-label="close">✕</button>
+      <div id="bloom-actions"><button class="skybtn" id="reply-btn">↳ reply with light</button></div>
+      <div id="reply-strip">
+        <div class="rl">15 seconds of voice · release to send — no retakes</div>
+        <button class="skyhold" id="reply-hold"><span class="lbl" id="reply-lbl">hold to speak</span><span class="hfill" id="reply-fill"></span></button>
+      </div>
+    </section>
+
+    <!-- 03 RELEASE -->
+    <section class="screen" id="scr-release">
+      <button id="release-back" aria-label="back">‹</button>
+      <div id="release-cap" class="toneE">
+        <div style="font-size:16px; color:rgba(255,255,255,.85);" id="rel-cap">15 seconds of now — point it at the night</div>
+      </div>
+      <div id="release-orb"></div>
+      <div id="launch-trail"></div>
+      <div id="rel-holdzone">
+        <div class="rl">hold to capture · let go, then release it to the sky</div>
+        <button class="skyhold" id="rel-hold"><span class="lbl" id="rel-lbl">hold to capture</span><span class="hfill" id="rel-fill"></span></button>
+        <button class="skybtn" id="letgo-btn">let it go ↑</button>
+      </div>
+    </section>
+
+    <!-- 04 THE GROUND (kit) -->
+    <section class="screen" id="scr-ground">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="ground-back">‹ </span>the ground</h1>
+          <p class="sub" style="font-size:13px;">where your settled lights go</p>
+          <div class="statrow" id="g-stats"></div>
+          <div class="label">settled</div>
+          <div id="g-list"></div>
+          <div class="nofollow">your ground is yours — no one sees your archive. no follower counts, ever.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 SETTINGS (kit) -->
+    <section class="screen" id="scr-settings">
+      <div class="scroll">
+        <div class="p20" id="settings-root">
+          <h1 class="h1"><span class="h1 backlink" id="set-back">‹ </span>Settings</h1>
+
+          <div class="label">The sky</div>
+          <div class="trow" id="horizon-trow">
+            <div class="c"><div class="t">Horizon lights</div><div class="s">discovery by distance — strangers' light arriving</div></div>
+            <span class="sw on" id="horizon-sw"></span>
+          </div>
+          <div class="trow" id="arrivals-trow">
+            <div class="c"><div class="t">Arrival notices</div><div class="s">"a light from london arrives in 38 min"</div></div>
+            <span class="sw on" id="arrivals-sw"></span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="ground-row">
+            <div class="c"><div class="t">The ground</div><div class="s" id="ground-sub">your settled lights</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">Account</div>
+          <div class="row" data-toast="Profile — coming in the next build">
+            <div class="c"><div class="t">My profile</div><div class="s">name, light color — nothing public</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="data-row">
+            <div class="c"><div class="t">Data &amp; storage</div><div class="s">lights stay on this device</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">About</div>
+          <div class="row" id="about-row">
+            <div class="c"><div class="t">About</div><div class="s">how far · the sky · stories are light</div></div><span class="chev">›</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="warp"></div>
+  <div id="overlay"><div class="dialog" id="dialog"></div></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* =============== data =============== */
+  var CIRCLE = [
+    { id:'amara',   name:'amara',   x:24, y:28, fresh:true,  when:'2h ago',
+      segs:[ {cap:'the junction, 6:42 pm — she waits for the bus that never comes', tone:'toneA', dur:4},
+              {cap:'third mainland at night, lights on the water', tone:'toneB', dur:4},
+              {cap:'she sings off-key, on purpose, to the whole street', tone:'toneC', dur:4} ]},
+    { id:'tunde',   name:'tunde',   x:63, y:21, fresh:true,  when:'just now',
+      segs:[ {cap:'traffic on ekpeter road, horns like a choir', tone:'toneB', dur:4},
+              {cap:'he bought the whole suya. the WHOLE suya.', tone:'A', tone:'toneA', dur:4} ]},
+    { id:'kelechi', name:'kelechi', x:79, y:56, fresh:true,  when:'yesterday',
+      segs:[ {cap:'rain on the zinc roof, 2 am, couldn\'t sleep', tone:'toneC', dur:4},
+              {cap:'generator hum — the city\'s second heartbeat', tone:'toneB', dur:4} ]},
+    { id:'ifeoma',  name:'ifeoma',  x:16, y:63, fresh:true,  when:'5h ago',
+      segs:[ {cap:'her shop at closing time — the good part of the day', tone:'toneA', dur:4} ]},
+    { id:'chidi',   name:'chidi',   x:41, y:82, fresh:false, when:'8 days ago',
+      segs:[ {cap:'eight months since his last light. the sky misses him.', tone:'toneD', dur:4} ]}
+  ];
+  var FAR = [
+    { id:'f-benin',  from:'benin city', tier:'city',  x:12, y:20, km:107,  left:'1h ago',
+      segs:[ {cap:'a stranger\'s evening in benin city — caught as it passed', tone:'toneB', dur:4} ]},
+    { id:'f-lagos',  from:'lagos',      tier:'city',  x:88, y:34, km:312,  left:'2h ago',
+      segs:[ {cap:'lagos traffic, from inside a keke, moving faster than the cars', tone:'toneA', dur:4} ]},
+    { id:'f-abuja',  from:'abuja',      tier:'city',  x:72, y:12, km:455,  left:'3h ago',
+      segs:[ {cap:'abuja at dusk — hills holding the last light', tone:'toneC', dur:4} ]},
+    { id:'f-accra',  from:'accra',      tier:'world', x:8,  y:52, km:890,  left:'6h ago',
+      segs:[ {cap:'accra\'s coast road, wind doing all the talking', tone:'toneB', dur:4} ]},
+    { id:'f-london', from:'london',     tier:'world', x:50, y:8,  km:5266, left:'8h ago',
+      segs:[ {cap:'london rain on a night bus window — 5,266 km from you', tone:'toneD', dur:4} ]},
+    { id:'f-nairobi',from:'nairobi',    tier:'world', x:92, y:74, km:3820, left:'9h ago',
+      segs:[ {cap:'nairobi, matatu lights streaking past', tone:'toneE', dur:4} ]}
+  ];
+  var INCOMING = { from:'london', mins:38 };
+  var GROUND_SETTLED = [
+    { band:'yesterday', rows:['the junction at night · 0:15 · 4 flares', 'rain on the roof · 0:08 · 2 flares'] },
+    { band:'earlier this week', rows:['sunday market colors · 0:15 · 7 flares', 'the long drive home · 0:12 · 3 flares'] }
+  ];
+  var stats = { released:12, flares:9, replies:4 };
+
+  var state = {
+    stack:['scr-splash'],
+    scope:'near',
+    person:null, far:null,
+    seg:0,
+    horizon:true, arrivals:true
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var screens = document.querySelectorAll('.screen');
+
+  /* =============== router =============== */
+  function show(id, push){
+    var el = $(id);
+    if (!el) return;
+    if (push !== false && state.stack[state.stack.length - 1] !== id) state.stack.push(id);
+    for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+    el.classList.add('active');
+    if (id === 'scr-sky') renderSkyStatus();
+    if (id === 'scr-ground') renderGround();
+  }
+  function back(){
+    if (state.stack.length > 1) state.stack.pop();
+    show(state.stack[state.stack.length - 1], false);
+  }
+
+  /* =============== toast + dialog (kit) =============== */
+  var toastTimer = null;
+  function toast(msg){
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2400);
+  }
+  var dialogCb = null;
+  function openDialog(title, items, cb){
+    dialogCb = cb || null;
+    var d = $('dialog');
+    var html = '<div class="dtitle"></div>';
+    items.forEach(function(it, i){
+      html += '<div class="pick' + (it.current ? ' cur' : '') + '" data-name="' + it.name.replace(/"/g, '') + '"' +
+              (typeof it.pick === 'number' ? ' data-pick="' + it.pick + '"' : '') + '>' +
+              '<div class="ph">' + (it.current ? '✓ ' : '') + it.name + '</div>' +
+              (it.desc ? '<div class="pd">' + it.desc + '</div>' : '') + '</div>';
+      if (i < items.length - 1) html += '<div class="divider"></div>';
+    });
+    html += '<button class="btn sm dlg-close">Cancel</button>';
+    d.innerHTML = html;
+    d.querySelector('.dtitle').textContent = title;
+    d.querySelectorAll('.pick').forEach(function(pk){
+      pk.addEventListener('click', function(){
+        if (dialogCb){
+          var idx = pk.getAttribute('data-pick');
+          dialogCb(pk.getAttribute('data-name'), idx !== null ? parseInt(idx, 10) : 0);
+        }
+        closeDialog();
+      });
+    });
+    d.querySelector('.dlg-close').addEventListener('click', closeDialog);
+    $('overlay').classList.add('show');
+  }
+  function closeDialog(){ $('overlay').classList.remove('show'); dialogCb = null; }
+  $('overlay').addEventListener('click', function(e){ if (e.target === this) closeDialog(); });
+
+  /* =============== clock =============== */
+  function tickClock(){
+    var d = new Date();
+    var h = d.getHours(), m = d.getMinutes();
+    $('clock').textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+  tickClock(); setInterval(tickClock, 15000);
+
+  /* =============== splash =============== */
+  var splashTimer = setTimeout(enterApp, 2200);
+  function enterApp(){
+    clearTimeout(splashTimer);
+    if (state.stack[state.stack.length - 1] === 'scr-splash') show('scr-sky', true);
+  }
+  $('scr-splash').addEventListener('click', enterApp);
+
+  /* =============== the sky =============== */
+  function drawStars(){
+    var c = $('sky-canvas');
+    var w = c.clientWidth, h = c.clientHeight;
+    c.width = w; c.height = h;
+    var ctx = c.getContext('2d');
+    var layers = [ {n:70, r:[.4,.9], a:[.12,.3], d:1}, {n:40, r:[.6,1.4], a:[.2,.5], d:2}, {n:16, r:[1,2], a:[.4,.85], d:3} ];
+    layers.forEach(function(L){
+      for (var i = 0; i < L.n; i++){
+        var x = Math.random() * w, y = Math.random() * h;
+        var r = L.r[0] + Math.random() * (L.r[1] - L.r[0]);
+        var a = L.a[0] + Math.random() * (L.a[1] - L.a[0]);
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(200,220,255,' + a.toFixed(2) + ')';
+        ctx.fill();
+        if (r > 1.5){ ctx.beginPath(); ctx.arc(x, y, r * 2.6, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(160,200,255,' + (a * .16).toFixed(2) + ')'; ctx.fill(); }
+      }
+    });
+  }
+
+  function lightEl(cls, x, y, name, when, id){
+    var el = document.createElement('div');
+    el.className = cls;
+    el.style.left = x + '%'; el.style.top = y + '%';
+    el.setAttribute('data-id', id);
+    el.innerHTML = '<div class="orb"></div><div class="lname"></div>' + (when ? '<div class="lwhen"></div>' : '');
+    el.querySelector('.lname').textContent = name;
+    if (when) el.querySelector('.lwhen').textContent = when;
+    return el;
+  }
+
+  function buildSky(){
+    var stage = $('sky-stage');
+    stage.innerHTML = '';
+    var you = lightEl('light you', 50, 47, 'you', '', 'you');
+    var lw = you.querySelector('.lwhen'); if (lw) lw.remove();
+    stage.appendChild(you);
+    you.addEventListener('click', function(){ show('scr-ground'); });
+    CIRCLE.forEach(function(p){
+      var el = lightEl('light' + (p.fresh ? ' fresh' : ' dimlit'), p.x, p.y, p.name, p.when, p.id);
+      el.setAttribute('data-segs', p.segs.length);
+      stage.appendChild(el);
+      p.el = el;
+      el.addEventListener('click', function(){ warpTo(p, el); });
+    });
+    FAR.forEach(function(f){
+      var el = document.createElement('div');
+      el.className = 'far-light';
+      el.setAttribute('data-tier', f.tier);
+      el.setAttribute('data-id', f.id);
+      el.style.left = f.x + '%'; el.style.top = f.y + '%';
+      el.innerHTML = '<div class="orb"></div><div class="fname"><b></b><i></i></div>';
+      el.querySelector('b').textContent = f.from;
+      el.querySelector('i').textContent = 'left ' + f.left + ' · ' + f.km.toLocaleString() + ' km';
+      stage.appendChild(el);
+      f.el = el;
+      el.addEventListener('click', function(){ farDialog(f); });
+    });
+    drawConstellation();
+  }
+
+  function drawConstellation(){
+    var svg = $('constellation');
+    var pairs = [ ['amara','tunde'], ['amara','ifeoma'], ['tunde','kelechi'], ['kelechi','chidi'] ];
+    var byId = {};
+    CIRCLE.forEach(function(p){ byId[p.id] = p; });
+    var html = '';
+    pairs.forEach(function(pr){
+      var a = byId[pr[0]], b = byId[pr[1]];
+      if (a && b) html += '<line x1="' + a.x + '%" y1="' + a.y + '%" x2="' + b.x + '%" y2="' + b.y + '%"></line>';
+    });
+    /* you connect to everyone */
+    CIRCLE.forEach(function(p){
+      html += '<line x1="50%" y1="47%" x2="' + p.x + '%" y2="' + p.y + '%" stroke-dasharray="2 5"></line>';
+    });
+    svg.innerHTML = html;
+  }
+
+  function renderSkyStatus(){
+    var up = CIRCLE.filter(function(p){ return p.fresh; }).length;
+    $('sky-status').textContent = '● ' + up + ' lights up tonight' +
+      (state.arrivals ? ' · 1 traveling to you' : '');
+  }
+
+  var SCOPES = ['near', 'city', 'world'];
+  var SCOPE_LABEL = { near:'near sky', city:'city', world:'world' };
+  $('scope-btn').addEventListener('click', function(){
+    setScope(SCOPES[(SCOPES.indexOf(state.scope) + 1) % SCOPES.length]);
+  });
+  function setScope(s){
+    state.scope = s;
+    $('scr-sky').setAttribute('data-scope', s);
+    $('scope-label').textContent = SCOPE_LABEL[s];
+    if (s !== 'near') toast(s === 'city' ? 'the city — lights from around you' : 'the world — light that traveled far to reach you');
+  }
+  /* pinch zoom (touch) + wheel (desktop) */
+  (function(){
+    var dist0 = 0, scope0 = null;
+    var sky = $('scr-sky');
+    sky.addEventListener('touchstart', function(e){
+      if (e.touches.length === 2){
+        dist0 = Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
+                           e.touches[0].clientY - e.touches[1].clientY);
+        scope0 = state.scope;
+      }
+    }, {passive:true});
+    sky.addEventListener('touchmove', function(e){
+      if (e.touches.length === 2 && dist0){
+        var d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX,
+                           e.touches[0].clientY - e.touches[1].clientY);
+        var ratio = d / dist0;
+        var i = SCOPES.indexOf(scope0);
+        if (ratio > 1.25) setScope(SCOPES[Math.min(2, Math.max(i + 1, 1))]);
+        else if (ratio < .78) setScope(SCOPES[Math.max(0, i - 1)]);
+      }
+    }, {passive:true});
+    sky.addEventListener('wheel', function(e){
+      e.preventDefault();
+      var i = SCOPES.indexOf(state.scope);
+      if (e.deltaY < -24) setScope(SCOPES[Math.min(2, i + 1)]);
+      else if (e.deltaY > 24) setScope(SCOPES[Math.max(0, i - 1)]);
+    }, {passive:false});
+  })();
+
+  /* far light → receipt dialog → catch it */
+  function farDialog(f){
+    openDialog('a light from ' + f.from, [
+      { name:'Catch it', desc:'left ' + f.left + ' · traveled ' + f.km.toLocaleString() + ' km to reach you — no algorithm sent it, distance did' },
+      { name:'Not now', desc:'let it pass on' }
+    ], function(name){
+      if (name === 'Catch it') warpToFar(f);
+    });
+  }
+
+  /* =============== warp + bloom =============== */
+  function warpTo(p, el){
+    state.person = p; state.far = null;
+    el.classList.add('flared');
+    setTimeout(function(){ el.classList.remove('flared'); }, 2400);
+    playWarp(function(){ openBloom(p.name, p.when, p.segs, false); });
+  }
+  function warpToFar(f){
+    state.far = f; state.person = null;
+    playWarp(function(){ openBloom('a stranger', f.left, f.segs, true); });
+  }
+  function playWarp(cb){
+    var w = $('warp');
+    w.classList.remove('play'); void w.offsetWidth; w.classList.add('play');
+    setTimeout(cb, 240);
+  }
+
+  var FUSE_R = 52, FUSE_C = 2 * Math.PI * FUSE_R;
+  var bloom = { segs:[], i:0, t0:0, paused:false, raf:null, done:false, isFar:false, name:'' };
+  $('fuse-arc').style.strokeDasharray = FUSE_C;
+  $('fuse-arc').style.strokeDashoffset = 0;
+
+  function openBloom(who, when, segs, isFar){
+    bloom.segs = segs; bloom.i = 0; bloom.done = false; bloom.isFar = !!isFar; bloom.name = who;
+    $('bloom-who').textContent = who;
+    $('bloom-when').textContent = when;
+    showSeg(0, true);
+    show('scr-bloom');
+  }
+  function showSeg(i, first){
+    bloom.i = i; bloom.paused = false; bloom.t0 = performance.now();
+    var seg = bloom.segs[i];
+    var m = $('bloom-media');
+    m.className = seg.tone + (first ? '' : ' drift-in');
+    if (!first){ m.classList.remove('drift-out'); void m.offsetWidth; }
+    m.setAttribute('data-seg', i);
+    $('bloom-cap').textContent = seg.cap;
+    $('fuse-arc').style.strokeDashoffset = 0;
+    if (bloom.raf) cancelAnimationFrame(bloom.raf);
+    bloom.raf = requestAnimationFrame(fuseStep);
+  }
+  function fuseStep(ts){
+    if (bloom.done) return;
+    if (!bloom.paused) bloom.elapsed = (ts - bloom.t0) / 1000;
+    var seg = bloom.segs[bloom.i];
+    var p = Math.min(1, (bloom.elapsed || 0) / seg.dur);
+    $('fuse-arc').style.strokeDashoffset = (FUSE_C * p).toFixed(1);
+    $('fuse-arc').setAttribute('data-p', p.toFixed(3));
+    if (p >= 1){
+      nextSeg();
+      return;
+    }
+    bloom.raf = requestAnimationFrame(fuseStep);
+  }
+  function nextSeg(){
+    if (bloom.i < bloom.segs.length - 1){
+      var m = $('bloom-media');
+      m.classList.remove('drift-in');
+      m.classList.add('drift-out');
+      setTimeout(function(){ showSeg(bloom.i + 1, false); }, 580);
+    } else {
+      closeBloom('drifted past — the sky moves on');
+    }
+  }
+  function closeBloom(msg){
+    bloom.done = true;
+    if (bloom.raf) cancelAnimationFrame(bloom.raf);
+    back();
+    if (msg) toast(msg);
+  }
+  $('bloom-close').addEventListener('click', function(){ closeBloom(''); });
+
+  /* anchor (touch pauses the sky) · hold ≥600ms = flare · flick = throw · pull down = rewind */
+  (function(){
+    var stage = $('scr-bloom');
+    var down = false, x0 = 0, y0 = 0, t0 = 0, flareFired = false, lastX = 0, lastT = 0, vx = 0, flareTimer = null;
+    function resumeFuse(){
+      if (bloom.elapsed !== undefined) bloom.t0 = performance.now() - bloom.elapsed * 1000;
+      bloom.paused = false;
+    }
+    function begin(x, y){
+      if (bloom.done || $('reply-strip').classList.contains('show')) return;
+      down = true; flareFired = false;
+      x0 = lastX = x; y0 = y; t0 = lastT = performance.now(); vx = 0;
+      bloom.paused = true;
+      $('scr-bloom').classList.add('anchored');
+      var g = $('anchor-glow');
+      g.style.left = x + 'px'; g.style.top = y + 'px';
+      /* warmth ignites while you hold — 600ms of looking becomes a flare */
+      clearTimeout(flareTimer);
+      flareTimer = setTimeout(function(){
+        if (!down || flareFired) return;
+        flareFired = true;
+        fireFlare(lastX, y0 + 40);
+      }, 600);
+    }
+    function move(x, y){
+      if (!down) return;
+      var now = performance.now();
+      if (now - lastT > 0){
+        vx = (x - lastX) / Math.max(1, now - lastT);
+        lastX = x; lastT = now;
+      }
+      if (!flareFired && Math.abs(x - x0) > 46 && Math.abs(vx) > .5){
+        throwStory();
+        return;
+      }
+      if (y - y0 > 110){ pullBack(); return; }
+    }
+    function end(){
+      if (!down) return;
+      down = false;
+      clearTimeout(flareTimer);
+      $('scr-bloom').classList.remove('anchored');
+      resumeFuse();
+    }
+    function throwStory(){
+      down = false;
+      clearTimeout(flareTimer);
+      $('scr-bloom').classList.remove('anchored');
+      closeBloom('thrown — the sky moves on');
+    }
+    function pullBack(){
+      down = false;
+      clearTimeout(flareTimer);
+      $('scr-bloom').classList.remove('anchored');
+      var m = $('bloom-media');
+      m.classList.remove('drift-in');
+      m.classList.add('pullback');
+      setTimeout(function(){ m.classList.remove('pullback'); }, 460);
+      showSeg(bloom.i, false); /* rewind this moment */
+      toast('pulled back — the moment starts again');
+    }
+    stage.addEventListener('mousedown', function(e){ if (e.target.closest('#reply-strip, #bloom-close, #reply-btn')) return; begin(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', function(e){ if (down) move(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', end);
+    stage.addEventListener('touchstart', function(e){ if (e.target.closest('#reply-strip, #bloom-close, #reply-btn')) return; begin(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+    stage.addEventListener('touchmove', function(e){ if (down) move(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+    stage.addEventListener('touchend', end);
+  })();
+
+  function fireFlare(x, y){
+    var ig = $('ignite');
+    ig.style.left = x + 'px'; ig.style.top = y + 'px';
+    ig.classList.remove('fired'); void ig.offsetWidth; ig.classList.add('fired');
+    stats.flares++;
+    var target = state.person || state.far;
+    if (target && target.el) target.el.classList.add('flared');
+    toast('flare sent — warmth, not a count');
+  }
+
+  /* =============== reply = a shooting star =============== */
+  $('reply-btn').addEventListener('click', function(){
+    $('reply-strip').classList.add('show');
+  });
+  (function(){
+    var holding = false, t0 = 0, raf = null, committed = false;
+    var btn = $('reply-hold'), fill = $('reply-fill');
+    function step(ts){
+      if (!holding || committed) return;
+      var p = Math.min(1, (ts - t0) / 15000); /* 15 seconds of voice, like every light here */
+      fill.style.transform = 'scaleX(' + p + ')';
+      if (p >= 1){ committed = true; holding = false; finish(15); }
+      else raf = requestAnimationFrame(step);
+    }
+    function begin(e){
+      if (committed) return;
+      e.preventDefault();
+      holding = true; t0 = performance.now();
+      raf = requestAnimationFrame(step);
+    }
+    function end(){
+      if (!holding || committed) return;
+      holding = false;
+      if (raf) cancelAnimationFrame(raf);
+      resetFill();
+      var held = (performance.now() - t0) / 1000;
+      if (held < 1){ toast('too quick — nothing sent'); return; }
+      finish(Math.max(1, Math.round(held)));
+    }
+    function resetFill(){
+      if (fill){ fill.style.transition = 'transform .3s ease'; fill.style.transform = 'scaleX(0)';
+        setTimeout(function(){ fill.style.transition = 'none'; }, 320); }
+    }
+    function finish(dur){
+      committed = false;
+      $('reply-strip').classList.remove('show');
+      sendReply(dur);
+    }
+    btn.addEventListener('mousedown', begin);
+    btn.addEventListener('touchstart', begin, {passive:false});
+    window.addEventListener('mouseup', function(){ if (holding) end(); });
+    btn.addEventListener('touchend', function(){ if (holding) end(); });
+  })();
+
+  function sendReply(dur){
+    var target = state.person || state.far;
+    if (!target) return;
+    stats.replies++;
+    bloom.done = true;
+    if (bloom.raf) cancelAnimationFrame(bloom.raf);
+    back(); /* return to the sky */
+    var name = state.person ? state.person.name : 'a stranger in ' + state.far.from;
+    toast('your light travels to ' + name + ' — no receipts, it just arrives');
+    /* the shooting star crosses the sky */
+    setTimeout(function(){ cometTo(target); }, 250);
+  }
+  function cometTo(target){
+    var sky = $('scr-sky');
+    var youR = youRect(), tR = target.el.getBoundingClientRect();
+    var frame = $('frame').getBoundingClientRect();
+    var comet = document.createElement('div');
+    comet.id = 'comet';
+    comet.style.left = (youR.x - frame.x) + 'px';
+    comet.style.top = (youR.y - frame.y) + 'px';
+    $('frame').appendChild(comet);
+    var dx = (tR.x + tR.width / 2 - frame.x) - (youR.x - frame.x);
+    var dy = (tR.y + tR.height / 2 - frame.y) - (youR.y - frame.y);
+    var anim = comet.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: 'translate(' + (dx * .5) + 'px,' + (dy * .5 - 70) + 'px) scale(1.15)', opacity: 1, offset: .55 },
+      { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.9)', opacity: .95 }
+    ], { duration: 1400, easing: 'cubic-bezier(.4,.1,.4,1)' });
+    anim.onfinish = function(){
+      comet.remove();
+      target.el.classList.add('flared');
+      setTimeout(function(){ target.el.classList.remove('flared'); }, 2600);
+    };
+  }
+  function youRect(){
+    var y = $('sky-stage').querySelector('.light.you');
+    var r = y.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  }
+
+  /* =============== release = capture + launch =============== */
+  var rel = { captured:false };
+  $('release-btn').addEventListener('click', function(){
+    rel.captured = false;
+    $('release-orb').classList.remove('formed', 'launch');
+    $('launch-trail').classList.remove('go');
+    $('letgo-btn').classList.remove('show');
+    $('rel-lbl').textContent = 'hold to capture';
+    $('rel-fill').style.transform = 'scaleX(0)';
+    show('scr-release');
+  });
+  $('release-back').addEventListener('click', back);
+  (function(){
+    var holding = false, t0 = 0, raf = null, done = false;
+    var btn = $('rel-hold'), fill = $('rel-fill');
+    function step(ts){
+      if (!holding || done) return;
+      var p = Math.min(1, (ts - t0) / 15000);
+      fill.style.transform = 'scaleX(' + p + ')';
+      if (p >= 1){ done = true; holding = false; formOrb(15); }
+      else raf = requestAnimationFrame(step);
+    }
+    function begin(e){
+      if (done) return;
+      e.preventDefault();
+      holding = true; t0 = performance.now();
+      raf = requestAnimationFrame(step);
+    }
+    function end(){
+      if (!holding) return;
+      holding = false;
+      if (raf) cancelAnimationFrame(raf);
+      fill.style.transition = 'transform .3s ease'; fill.style.transform = 'scaleX(0)';
+      setTimeout(function(){ fill.style.transition = 'none'; }, 320);
+      var held = (performance.now() - t0) / 1000;
+      if (held < 1){ toast('too quick — hold a moment worth keeping'); return; }
+      formOrb(Math.max(1, Math.round(held)));
+    }
+    btn.addEventListener('mousedown', begin);
+    btn.addEventListener('touchstart', begin, {passive:false});
+    window.addEventListener('mouseup', function(){ if (holding) end(); });
+    btn.addEventListener('touchend', function(){ if (holding) end(); });
+  })();
+  function formOrb(dur){
+    rel.captured = true; rel.dur = dur;
+    $('rel-cap').textContent = dur + ' second' + (dur === 1 ? '' : 's') + ' captured — it waits in your hand';
+    $('release-orb').classList.add('formed');
+    $('letgo-btn').classList.add('show');
+    $('rel-lbl').textContent = 'hold again to redo';
+    toast('the light is formed — let it go when you\'re ready');
+  }
+  $('letgo-btn').addEventListener('click', function(){
+    if (!rel.captured) return;
+    rel.captured = false;
+    $('release-orb').classList.remove('formed');
+    $('release-orb').classList.add('launch');
+    $('launch-trail').classList.add('go');
+    stats.released++;
+    var youEl = $('sky-stage').querySelector('.light.you');
+    setTimeout(function(){
+      back();
+      youEl.classList.add('bright');
+      setTimeout(function(){ youEl.classList.remove('bright'); }, 3000);
+      renderSkyStatus();
+      toast('released — it travels to your circle now, then outward');
+    }, 780);
+  });
+
+  /* =============== the ground (kit) =============== */
+  $('ground-back').addEventListener('click', back);
+  function renderGround(){
+    $('g-stats').innerHTML =
+      '<div class="stat"><b>' + stats.released + '</b><span>lights released</span></div>' +
+      '<div class="stat"><b>' + stats.flares + '</b><span>flares sent</span></div>' +
+      '<div class="stat"><b>' + stats.replies + '</b><span>replies sent</span></div>';
+    var list = $('g-list');
+    list.innerHTML = '';
+    GROUND_SETTLED.forEach(function(g){
+      var head = document.createElement('div');
+      head.className = 'bandhead';
+      head.textContent = g.band;
+      list.appendChild(head);
+      g.rows.forEach(function(r, i){
+        var row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = '<div class="c"><div class="t"></div><div class="s"></div></div><span class="chev">›</span>';
+        var parts = r.split(' · ');
+        row.querySelector('.t').textContent = parts[0];
+        row.querySelector('.s').textContent = parts.slice(1).join(' · ');
+        row.addEventListener('click', function(){ toast('settled lights rest — they don\'t replay'); });
+        list.appendChild(row);
+        if (i < g.rows.length - 1){ var d = document.createElement('div'); d.className = 'divider'; list.appendChild(d); }
+      });
+    });
+    $('ground-sub').textContent = stats.released + ' lights released · ' + stats.flares + ' flares';
+  }
+
+  /* =============== settings (kit) =============== */
+  $('set-back').addEventListener('click', back);
+  $('gear-btn').addEventListener('click', function(){ show('scr-settings'); });
+  $('ground-row').addEventListener('click', function(){ show('scr-ground'); });
+  $('horizon-trow').addEventListener('click', function(){
+    state.horizon = !state.horizon;
+    var sw = $('horizon-sw');
+    sw.classList.toggle('on', state.horizon);
+    $('scr-sky').classList.toggle('nohorizon', !state.horizon);
+    toast(state.horizon ? 'horizon lights on — the world can reach you' : 'horizon off — only your circle\'s light');
+  });
+  $('arrivals-trow').addEventListener('click', function(){
+    state.arrivals = !state.arrivals;
+    var sw = $('arrivals-sw');
+    sw.classList.toggle('on', state.arrivals);
+    $('scr-sky').classList.toggle('noarrivals', !state.arrivals);
+    renderSkyStatus();
+    toast(state.arrivals ? 'arrival notices on' : 'arrival notices off — light will just appear');
+  });
+  $('data-row').addEventListener('click', function(){
+    openDialog('Data & storage', [
+      { name:'On this device', desc:'every light lives on your phone until it settles' },
+      { name:'Offline', desc:'a release always succeeds — it travels when there\'s signal' },
+      { name:'Nothing for sale', desc:'no ads in the sky, no tracking, no data leaves this phone' }
+    ]);
+  });
+  $('about-row').addEventListener('click', function(){
+    openDialog('About', [
+      { name:'how far · the sky', desc:'stories are light · posting is release · distance is the feed' },
+      { name:'No algorithm', desc:'geography and time decide what reaches you — nothing else does' },
+      { name:'The ground', desc:'lights settle after two days — your archive is yours alone' }
+    ]);
+  });
+  document.querySelectorAll('#settings-root .row[data-toast]').forEach(function(r){
+    r.addEventListener('click', function(){ toast(r.getAttribute('data-toast')); });
+  });
+
+  /* =============== the sky breathes — incoming countdown =============== */
+  setInterval(function(){
+    if (INCOMING.mins > 0){
+      INCOMING.mins--;
+      $('inc-mins').textContent = INCOMING.mins;
+      if (INCOMING.mins === 0){
+        /* the light arrives */
+        $('incoming').style.opacity = 0;
+        var f = FAR.find(function(x){ return x.from === 'london'; });
+        if (f){ f.el.classList.add('flared'); setTimeout(function(){ f.el.classList.remove('flared'); }, 2600); }
+        toast('a light from london just arrived at your horizon');
+        renderSkyStatus();
+      }
+    }
+  }, 9000);
+
+  /* =============== boot =============== */
+  window.addEventListener('resize', drawStars);
+  buildSky();
+  renderSkyStatus();
+})();
+</script>
+</body>
+</html>

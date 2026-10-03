@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>how far</title>
+<style>
+/* ================================================================
+   how far — the app, cloned from ReplyMate's UI (v5)
+   every value below is from the ReplyMate repo:
+   colors.xml · themes.xml · activity_home.xml · activity_conversation.xml
+   activity_settings/voice.xml · Ui.java · btn_primary/ghost · bg_field/card
+   bubbles #1C2330/#1E3250 · splash glow #380A84FF + ring #660A84FF
+   the only how far elements: the logo, the name, the content.
+   ================================================================ */
+:root{
+  --bg:#0D1117; --card:#161B22; --accent:#0A84FF; --text:#FFFFFF; --dim:#AAB2BD;
+  --red:#FF6B6B; --green:#3FB950; --field:#11161D; --stroke:#2A3139;
+  --bin:#1C2330; --bout:#1E3250;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%; margin:0;}
+body{background:#000; font-family:Roboto,"Helvetica Neue",-apple-system,"Segoe UI",Arial,sans-serif;
+  color:var(--text); font-size:14px; overflow:hidden;}
+#frame{max-width:480px; height:100dvh; margin:0 auto; background:var(--bg);
+  position:relative; overflow:hidden; display:flex; flex-direction:column;}
+
+/* status bar (theme: statusBarColor = bg) */
+#statusbar{flex:none; height:30px; display:flex; justify-content:space-between; align-items:center;
+  padding:0 16px; font-size:12px; color:rgba(255,255,255,.85); background:var(--bg);}
+#statusbar .sicons{display:flex; align-items:center; gap:6px;}
+.sig{display:flex; align-items:flex-end; gap:1.5px; height:11px;}
+.sig i{width:2.5px; background:rgba(255,255,255,.85); border-radius:.5px;}
+.sig i:nth-child(1){height:4px;} .sig i:nth-child(2){height:6.5px;}
+.sig i:nth-child(3){height:9px;} .sig i:nth-child(4){height:11px;}
+.batt{width:20px; height:10px; border:1px solid rgba(255,255,255,.6); border-radius:2.5px; position:relative;}
+.batt::after{content:""; position:absolute; inset:1.5px 6px 1.5px 1.5px; background:rgba(255,255,255,.85);}
+
+/* screens = android activities */
+#screens{flex:1; position:relative; overflow:hidden; background:var(--bg);}
+.screen{position:absolute; inset:0; background:var(--bg); display:none; flex-direction:column;}
+.screen.active{display:flex;}
+.screen.slide{animation:act_in .19s ease-out;}
+@keyframes act_in{from{opacity:.3; transform:translateX(26px);} to{opacity:1; transform:none;}}
+.scroll{flex:1; overflow-y:auto; min-height:0;}
+.scroll::-webkit-scrollbar{width:0;}
+
+/* ---- Ui.java widgets ---- */
+.p20{padding:20px;}
+.h1{font-size:24px; font-weight:700; margin:0;}
+.h1.backlink{cursor:pointer; display:inline-block;}
+.sub{font-size:12px; color:var(--dim); margin:2px 0 0;}
+.statusline{font-size:12px; color:var(--accent); margin-top:10px; cursor:default;}
+.statusline.ok{color:var(--green);} .statusline.warn{color:#F0B450; cursor:pointer;}
+.privacyline{font-size:11px; color:var(--dim); margin-top:6px;}
+/* default Material button (grey, caps) — what ReplyMate's XML Buttons render as */
+.btn{display:block; width:100%; background:#3E4448; border:none; color:var(--text);
+  font-family:inherit; font-size:14px; font-weight:500; text-transform:uppercase; letter-spacing:.03em;
+  padding:13px 16px; border-radius:2px; cursor:pointer; margin-top:16px;}
+.btn:active{background:#33393d;}
+.btn.sm{margin-top:0; padding:12px 14px; font-size:13px; width:auto;}
+.btn.tiny{margin-top:6px; padding:10px 12px; font-size:12px;}
+.btn.tiny2{margin-top:4px; padding:10px 12px; font-size:12px;}
+/* Ui.primaryBtn — accent pill, 52dp, 16sp bold, no caps */
+.btn-primary{display:block; width:100%; background:var(--accent); border:none; color:#fff;
+  font-family:inherit; font-size:16px; font-weight:700; min-height:52px; border-radius:14px;
+  cursor:pointer; margin-top:14px;}
+.btn-primary:active{background:#0871d8;}
+/* Ui.ghostBtn — hairline, 52dp */
+.btn-ghost{display:block; width:100%; background:transparent; border:1px solid #3DFFFFFF; color:var(--text);
+  font-family:inherit; font-size:16px; min-height:52px; border-radius:14px; cursor:pointer; margin-top:8px;}
+.btn-ghost:active{background:rgba(255,255,255,.05);}
+/* Ui.field */
+.field{display:block; width:100%; background:var(--field); border:1px solid var(--stroke); border-radius:10px;
+  color:var(--text); font-family:inherit; font-size:15px; padding:12px; outline:none;}
+.field::placeholder{color:var(--dim);}
+.field.sm{font-size:13px; padding:8px 10px;}
+/* Ui.row */
+.row{display:flex; align-items:center; padding:14px 0; cursor:pointer;}
+.row .c{flex:1; min-width:0;}
+.row .t{font-size:16px;}
+.row .s{font-size:13px; color:var(--dim); margin-top:2px;}
+.row .chev{font-size:22px; color:var(--dim); font-weight:400; flex:none; margin-left:8px;}
+.divider{height:1px; background:var(--stroke);}
+.label{font-size:12px; color:var(--dim); padding:12px 0 4px;}
+/* Ui.toggleRow + real Switch */
+.trow{display:flex; align-items:center; padding:10px 4px 10px 0; cursor:pointer;}
+.trow .c{flex:1; min-width:0;}
+.trow .t{font-size:16px;}
+.trow .s{font-size:13px; color:var(--dim); margin-top:2px;}
+.sw{flex:none; width:38px; height:20px; border-radius:20px; background:#3a4046; position:relative;
+  margin-left:12px; transition:background .15s;}
+.sw::after{content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
+  background:#fff; transition:left .15s;}
+.sw.on{background:var(--accent);}
+.sw.on::after{left:20px;}
+.card{background:var(--card); border-radius:12px; padding:14px;}
+
+/* ---- logo (the one how far element) ---- */
+.logo{display:inline-block; vertical-align:middle;}
+.logo .ldot{transform-box:fill-box; transform-origin:center; animation:ldot 2.4s ease-in-out infinite;}
+@keyframes ldot{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+
+/* ---- splash (splash_glow #380A84FF / splash_ring #660A84FF, cloned) ---- */
+#scr-splash{align-items:center; justify-content:center; text-align:center;}
+.splash-wrap{position:relative; width:170px; height:170px; display:flex; align-items:center; justify-content:center;}
+.splash-glow{position:absolute; inset:-45px; border-radius:50%;
+  background:radial-gradient(circle, rgba(10,132,255,.22) 0%, rgba(10,132,255,.1) 45%, rgba(10,132,255,0) 72%);}
+.splash-ring{position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(10,132,255,.4);}
+#scr-splash .h1{margin-top:20px;}
+
+/* ---- home (activity_home.xml, 20dp padding) ---- */
+.home-head{display:flex; align-items:center;}
+.home-head .tt{flex:1; min-width:0;}
+.home-head .tt .nm{display:flex; align-items:center; gap:9px;}
+.gear{font-size:24px; color:var(--dim); padding:8px; cursor:pointer; background:none; border:none; font-family:inherit;}
+#place-list .row:first-child{padding-top:10px;}
+.empty-state{display:none; text-align:center; padding:24px; font-size:14px; color:var(--dim); white-space:pre-line;}
+
+/* ---- conversation (activity_conversation.xml) ---- */
+.conv-head{display:flex; align-items:center; padding:16px;}
+.conv-back{font-size:28px; color:var(--accent); padding:0 12px 0 4px; cursor:pointer; flex:none; line-height:1;}
+.conv-tt{flex:1; min-width:0;}
+.conv-name{font-size:18px; font-weight:700;}
+.conv-rel{font-size:12px; color:var(--dim); margin-top:1px;}
+.conv-act{font-size:14px; color:var(--accent); padding:8px; cursor:pointer; flex:none; background:none; border:none; font-family:inherit;}
+.conv-searchwrap{padding:0 16px 6px;}
+#gen-status{padding:0 16px 4px; font-size:12px; color:var(--accent); min-height:18px;}
+#msg-scroll{padding:0 16px;}
+.msg-list{display:flex; flex-direction:column; padding-bottom:8px;}
+.bubble{max-width:80%; border-radius:14px; padding:10px 12px; margin-top:8px;}
+.bubble.in{background:var(--bin); align-self:flex-start;}
+.bubble.out{background:var(--bout); align-self:flex-end; margin-left:48px;}
+.bubble .chip{font-size:11px; font-weight:700; margin-bottom:4px; color:var(--accent);}
+.bubble .chip.done{color:var(--green);}
+.bubble .btext{font-size:15px; line-height:1.45;}
+.brow{display:flex; align-items:center; gap:9px;}
+.pbtn{width:28px; height:28px; border-radius:50%; background:var(--accent); border:none; color:#fff;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; font-size:11px; padding:0;}
+.pbtn:active{background:#0871d8;}
+.bars{display:flex; align-items:center; gap:2px; height:18px; flex:1;}
+.bars i{width:2px; border-radius:1px; background:var(--dim); height:6px;}
+.bubble.out .bars i{background:#B9CCE4;}
+.bars.live i{animation:bdance 1s ease-in-out infinite;}
+@keyframes bdance{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
+.bdur{font-size:13px; flex:none;}
+.bmeta{font-size:11px; color:var(--dim); margin-top:5px;}
+.no-results{display:none; text-align:center; color:var(--dim); font-size:13px; padding:24px 0;}
+/* composer (card, 12dp pad) */
+.composer{background:var(--card); padding:12px; flex:none;}
+.composer-row{display:flex; align-items:flex-end; gap:8px;}
+#msg-input{flex:1; min-height:46px; resize:none;}
+.send-btn{width:56px; height:48px; flex:none; margin-top:0; font-size:18px; padding:0;}
+.them-btn{height:48px; flex:none; margin-top:0;}
+
+/* ---- record (activity_voice.xml pattern: inner ‹ title) ---- */
+.rec-status{font-size:12px; color:var(--green); margin-top:10px;}
+.rec-card{margin-top:16px;}
+.rec-timer{font-size:15px; margin-top:4px;}
+.rec-note{font-size:11px; color:var(--dim); margin-top:10px; line-height:1.5;}
+
+/* ---- android toast ---- */
+#toast{position:absolute; left:50%; bottom:72px; transform:translateX(-50%) translateY(8px);
+  background:#22272e; color:#fff; font-size:13px; padding:10px 18px; border-radius:22px;
+  opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; z-index:60; white-space:nowrap;}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+/* ---- alert dialog (Ui.showLevelPicker) ---- */
+#overlay{position:absolute; inset:0; background:rgba(0,0,0,.6); display:none; z-index:50;
+  align-items:center; justify-content:center; padding:28px;}
+#overlay.show{display:flex;}
+.dialog{background:#1a1f26; border-radius:4px; padding:18px 16px 10px; width:100%; max-width:340px;
+  max-height:80%; overflow-y:auto;}
+.dialog .dtitle{font-size:18px; font-weight:700; margin-bottom:8px;}
+.pick{padding:10px 0; cursor:pointer;}
+.pick .ph{font-size:16px;}
+.pick.cur .ph{color:var(--accent); font-weight:700;}
+.pick .pd{font-size:13px; color:var(--dim); margin-top:2px;}
+.pick .pe{font-size:13px; color:var(--dim); font-style:italic; margin-top:2px;}
+.dlg-close{width:auto; margin:10px 0 4px; align-self:flex-end; padding:8px 16px;}
+</style>
+</head>
+<body>
+<div id="frame">
+
+  <div id="statusbar">
+    <span id="clock">18:20</span>
+    <span class="sicons">
+      <span class="sig"><i></i><i></i><i></i><i></i></span>
+      <span style="font-size:10px;">5G</span>
+      <span class="batt"></span>
+    </span>
+  </div>
+
+  <div id="screens">
+
+    <!-- ================= SPLASH ================= -->
+    <section class="screen active" id="scr-splash">
+      <div class="splash-wrap">
+        <div class="splash-glow"></div>
+        <div class="splash-ring"></div>
+        <svg class="logo" width="86" height="77" viewBox="0 0 112 100" aria-label="how far">
+          <g transform="translate(8,-7)">
+            <circle cx="40" cy="58" r="24" fill="none" stroke="#C6FF3D" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+            <circle cx="88" cy="24" r="11" fill="#C6FF3D"/>
+          </g>
+          <circle cx="40" cy="58" r="24" fill="none" stroke="#FF4A1C" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+          <circle class="ldot" cx="88" cy="24" r="11" fill="#FF4A1C"/>
+        </svg>
+      </div>
+      <h1 class="h1">how far</h1>
+      <p class="sub">the ground remembers</p>
+    </section>
+
+    <!-- ================= HOME (activity_home.xml) ================= -->
+    <section class="screen" id="scr-home">
+      <div class="scroll">
+        <div class="p20" style="padding-bottom:0;">
+          <div class="home-head">
+            <div class="tt">
+              <div class="nm">
+                <svg class="logo" width="24" height="21" viewBox="0 0 112 100" aria-hidden="true">
+                  <g transform="translate(8,-7)"><circle cx="40" cy="58" r="24" fill="none" stroke="#C6FF3D" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/><circle cx="88" cy="24" r="11" fill="#C6FF3D"/></g>
+                  <circle cx="40" cy="58" r="24" fill="none" stroke="#FF4A1C" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+                  <circle cx="88" cy="24" r="11" fill="#FF4A1C"/>
+                </svg>
+                <span class="h1">how far</span>
+              </div>
+              <p class="sub">what people left where they stood</p>
+            </div>
+            <button class="gear" id="gear-btn" aria-label="settings">⚙</button>
+          </div>
+
+          <div class="statusline ok" id="home-status">● Location on · rumuokoro junction</div>
+          <div class="privacyline">your position never leaves this phone · voices stay where they were dropped</div>
+
+          <button class="btn" id="new-drop-btn">＋ Drop a voice here</button>
+
+          <input class="field" id="home-search" style="margin-top:10px; font-size:14px; padding:10px 12px;" placeholder="Search places or voices…" autocomplete="off">
+
+          <div id="place-list"></div>
+          <div class="empty-state" id="home-empty">You're the first here.
+Drop a voice and the ground starts remembering.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PLACE (activity_conversation.xml) ================= -->
+    <section class="screen" id="scr-place">
+      <div class="conv-head">
+        <span class="conv-back" id="place-back">‹</span>
+        <div class="conv-tt">
+          <div class="conv-name" id="place-name">rumuokoro junction</div>
+          <div class="conv-rel" id="place-rel">6 here right now · a count, never a coordinate</div>
+        </div>
+        <button class="conv-act" id="place-live">Live</button>
+        <button class="conv-act" id="place-info">Info</button>
+      </div>
+      <div class="conv-searchwrap">
+        <input class="field sm" id="place-search" placeholder="Search this place…" autocomplete="off">
+      </div>
+      <div class="scroll" id="msg-scroll">
+        <div class="msg-list" id="msg-list"></div>
+        <div class="no-results" id="place-nr">no voices match</div>
+      </div>
+      <div id="gen-status">● 6 here right now · a count, never a coordinate</div>
+      <div class="composer">
+        <div class="composer-row">
+          <button class="btn sm them-btn" id="them-btn" title="Log a voice you heard here">＋ Heard</button>
+          <textarea class="field" id="msg-input" rows="1" placeholder="Type your note for this place…"></textarea>
+          <button class="btn sm send-btn" id="send-btn" title="Leave note">➤</button>
+        </div>
+        <button class="btn tiny" id="record-btn">🎤 Record a voice drop (plays for whoever stands next)</button>
+        <button class="btn tiny2" id="intent-btn">＋ Intentional drop: reply · greet · mark the spot</button>
+      </div>
+    </section>
+
+    <!-- ================= RECORD (activity_voice.xml pattern) ================= -->
+    <section class="screen" id="scr-record">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="rec-back">‹ </span>drop a voice</h1>
+          <p class="sub" style="font-size:13px;">it only works where you are</p>
+          <div class="rec-status" id="rec-status">● you're standing in rumuokoro junction</div>
+
+          <div class="card rec-card">
+            <div class="label" style="padding-top:0;">Recording</div>
+            <div class="brow" id="rec-bars-row" style="display:none;">
+              <span class="bars live" id="rec-bars" style="height:26px;"></span>
+            </div>
+            <div class="rec-timer" id="rec-timer" style="display:none;">0:00 / 0:15</div>
+            <div id="rec-idle-copy" class="sub" style="font-size:13px; margin-top:4px;">15 seconds, one take. When it sinks it stays — it plays for whoever stands here next.</div>
+            <button class="btn-primary" id="rec-main">🎤 Start recording</button>
+            <button class="btn-ghost" id="rec-discard" style="display:none;">Discard</button>
+            <div class="rec-note" id="rec-note">no retakes after it sinks — it's a moment, not a message</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS (activity_settings.xml) ================= -->
+    <section class="screen" id="scr-settings">
+      <div class="scroll">
+        <div class="p20" id="settings-root">
+          <h1 class="h1"><span class="h1 backlink" id="set-back">‹ </span>Settings</h1>
+
+          <div class="label">Account</div>
+          <div class="row" data-toast="Profile — coming in the next build">
+            <div class="c"><div class="t">My profile</div><div class="s">name, avatar, presence</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" data-toast="Account — coming in the next build">
+            <div class="c"><div class="t">Account</div><div class="s">email · sync across devices</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">My ground</div>
+          <div class="row" id="myplaces-row">
+            <div class="c"><div class="t">My places</div><div class="s" id="myplaces-sub">4 places · 47 moments</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="deepest-row">
+            <div class="c"><div class="t">Deepest memory</div><div class="s">old campus gate · 2 years down</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">Place sensing</div>
+          <div class="row" id="precision-row">
+            <div class="c"><div class="t">Location precision</div><div class="s" id="precision-sub">active: exact · voices can be dropped ✓</div></div><span class="chev">›</span>
+          </div>
+          <div class="trow" id="alerts-trow">
+            <div class="c"><div class="t">Standing alerts</div><div class="s">ping when someone drops where you stand</div></div>
+            <span class="sw on" id="alerts-sw"></span>
+          </div>
+
+          <div class="label">Privacy</div>
+          <div class="trow" id="ghost-trow">
+            <div class="c"><div class="t">Ghost mode</div><div class="s">invisible in the live count</div></div>
+            <span class="sw" id="ghost-sw"></span>
+          </div>
+          <div class="trow" id="livecount-trow">
+            <div class="c"><div class="t">Live counts</div><div class="s">show how many people are at each place</div></div>
+            <span class="sw on" id="livecount-sw"></span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="data-row">
+            <div class="c"><div class="t">Data &amp; storage</div><div class="s">voices stay on this device</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">About</div>
+          <div class="row" id="about-row">
+            <div class="c"><div class="t">About</div><div class="s">how far 1.0 · the ground remembers</div></div><span class="chev">›</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= MY PLACES ================= -->
+    <section class="screen" id="scr-myplaces">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="mp-back">‹ </span>my ground</h1>
+          <p class="sub" style="font-size:13px;">everywhere you've left something</p>
+          <div id="mp-list" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- dialog + toast -->
+  <div id="overlay"><div class="dialog" id="dialog"></div></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------------- data ---------------- */
+  var PLACES = [
+    { name:'rumuokoro junction', live:6, moments:9, deepest:'3 months down',
+      voices:[
+        { dir:'in',  dur:12, meta:'4 min ago' },
+        { dir:'out', dur:15, meta:'40 min ago' },
+        { dir:'in',  dur:11, meta:'this morning' },
+        { dir:'in',  dur:15, meta:'friday night' },
+        { dir:'out', dur:10, meta:'3 weeks ago' },
+        { dir:'in',  dur:15, meta:'◈ echo · a voice from march' },
+        { dir:'in',  dur:10, meta:'last december' }
+      ]},
+    { name:'the spot', live:2, moments:12, deepest:'1 year down',
+      voices:[
+        { dir:'out', dur:14, meta:'yesterday' },
+        { dir:'in',  dur:9,  meta:'2 days ago · someone answered you' },
+        { dir:'out', dur:12, meta:'3 weeks ago' },
+        { dir:'in',  dur:15, meta:'2 months ago' }
+      ]},
+    { name:'creek market', live:0, moments:18, deepest:'1 year down',
+      voices:[
+        { dir:'in',  dur:13, meta:'4 days ago' },
+        { dir:'in',  dur:8,  meta:'4 days ago' },
+        { dir:'out', dur:11, meta:'2 weeks ago' }
+      ]},
+    { name:'old campus gate', live:1, moments:8, deepest:'2 years down',
+      voices:[
+        { dir:'out', dur:15, meta:'5 months ago' },
+        { dir:'in',  dur:10, meta:'1 year ago' },
+        { dir:'in',  dur:15, meta:'2 years ago · four voices down here' }
+      ]}
+  ];
+
+  var state = {
+    stack: ['scr-splash'],
+    place: null,
+    placeFilter: '',
+    homeFilter: '',
+    precision: 2,
+    recording: null,   /* {t, timer, raf} */
+    recStage: 'idle',
+    intention: null
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var screens = document.querySelectorAll('.screen');
+
+  /* ---------------- router ---------------- */
+  function show(id, push){
+    var el = $(id);
+    if (!el) return;
+    if (push !== false && state.stack[state.stack.length - 1] !== id) state.stack.push(id);
+    for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+    el.classList.add('active');
+    el.classList.remove('slide'); void el.offsetWidth; el.classList.add('slide');
+  }
+  function back(){
+    if (state.stack.length > 1) state.stack.pop();
+    show(state.stack[state.stack.length - 1], false);
+  }
+
+  /* ---------------- toast ---------------- */
+  var toastTimer = null;
+  function toast(msg){
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2100);
+  }
+
+  /* ---------------- clock ---------------- */
+  function tickClock(){
+    var d = new Date();
+    var h = d.getHours(), m = d.getMinutes();
+    $('clock').textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+  tickClock(); setInterval(tickClock, 15000);
+
+  /* ---------------- splash ---------------- */
+  var splashTimer = setTimeout(enterApp, 2200);
+  function enterApp(){
+    clearTimeout(splashTimer);
+    if (state.stack[state.stack.length - 1] === 'scr-splash') show('scr-home', true);
+  }
+  $('scr-splash').addEventListener('click', enterApp);
+
+  /* ---------------- home ---------------- */
+  function lastPreview(p){
+    var v = p.voices[p.voices.length - 1];
+    if (!v) return 'no voices yet';
+    return (v.dir === 'out' ? 'you · ' : 'a voice · ') + v.meta + ' · 0:' + (v.dur < 10 ? '0' : '') + v.dur;
+  }
+  function renderHome(){
+    var q = state.homeFilter.toLowerCase();
+    var list = $('place-list');
+    list.innerHTML = '';
+    var shown = 0;
+    PLACES.forEach(function(p){
+      var hit = !q || p.name.toLowerCase().indexOf(q) >= 0 ||
+        p.voices.some(function(v){ return v.meta.toLowerCase().indexOf(q) >= 0; });
+      if (!hit) return;
+      shown++;
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div class="c"><div class="t"></div><div class="s"></div></div><span class="chev">›</span>';
+      row.querySelector('.t').textContent = p.name;
+      row.querySelector('.s').textContent = (p.live > 0 ? '● ' + p.live + ' here now · ' : '') + lastPreview(p);
+      row.addEventListener('click', function(){ openPlace(p); });
+      list.appendChild(row);
+      var d = document.createElement('div'); d.className = 'divider'; list.appendChild(d);
+    });
+    if (shown > 0) list.lastChild.remove();
+    $('home-empty').style.display = shown ? 'none' : 'block';
+  }
+  $('home-search').addEventListener('input', function(){
+    state.homeFilter = this.value;
+    renderHome();
+  });
+  $('home-status').addEventListener('click', function(){
+    var el = this;
+    if (el.classList.contains('ok')){
+      el.className = 'statusline warn';
+      el.textContent = 'Location is off — tap to enable (or keep browsing places)';
+    } else {
+      el.className = 'statusline ok';
+      el.textContent = '● Location on · rumuokoro junction';
+    }
+  });
+  $('new-drop-btn').addEventListener('click', function(){
+    state.intention = null;
+    openRecord(PLACES[0]);
+  });
+  $('gear-btn').addEventListener('click', function(){ show('scr-settings'); });
+
+  /* ---------------- place ---------------- */
+  function fmt(s){ return '0:' + (s < 10 ? '0' : '') + s; }
+  function genBars(n, seed){
+    var html = '';
+    for (var i = 0; i < n; i++){
+      var h = 5 + Math.abs(Math.sin(i * (seed || 1.7) * 3.1)) * 12;
+      html += '<i style="height:' + h.toFixed(0) + 'px; animation-delay:' + ((i % 5) * .12).toFixed(2) + 's"></i>';
+    }
+    return html;
+  }
+  function renderThread(){
+    var p = state.place;
+    var q = state.placeFilter.toLowerCase();
+    var list = $('msg-list');
+    list.innerHTML = '';
+    var shown = 0;
+    p.voices.forEach(function(v){
+      if (q && v.meta.toLowerCase().indexOf(q) < 0 && !(v.text && v.text.toLowerCase().indexOf(q) >= 0)) return;
+      shown++;
+      list.appendChild(bubbleEl(v));
+    });
+    $('place-nr').style.display = (q && !shown) ? 'block' : 'none';
+  }
+  function bubbleEl(v){
+    var b = document.createElement('div');
+    b.className = 'bubble ' + v.dir;
+    if (v.chip){
+      var c = document.createElement('div');
+      c.className = 'chip' + (v.chipDone ? ' done' : '');
+      c.textContent = v.chip;
+      b.appendChild(c);
+    }
+    if (v.text){
+      var t = document.createElement('div');
+      t.className = 'btext';
+      t.textContent = v.text;
+      b.appendChild(t);
+    } else {
+      var row = document.createElement('div');
+      row.className = 'brow';
+      var btn = document.createElement('button');
+      btn.className = 'pbtn'; btn.textContent = '▶';
+      var bars = document.createElement('span');
+      bars.className = 'bars'; bars.innerHTML = genBars(16, v.dur);
+      var dur = document.createElement('span');
+      dur.className = 'bdur'; dur.textContent = fmt(v.dur);
+      row.appendChild(btn); row.appendChild(bars); row.appendChild(dur);
+      btn.addEventListener('click', function(){
+        if (bars.classList.contains('live')) return;
+        bars.classList.add('live');
+        btn.textContent = '❚❚';
+        setTimeout(function(){ bars.classList.remove('live'); btn.textContent = '▶'; }, Math.min(v.dur, 6) * 1000);
+      });
+      b.appendChild(row);
+    }
+    var meta = document.createElement('div');
+    meta.className = 'bmeta';
+    meta.textContent = v.meta;
+    b.appendChild(meta);
+    return b;
+  }
+  function openPlace(p){
+    state.place = p;
+    state.placeFilter = '';
+    $('place-search').value = '';
+    $('place-name').textContent = p.name;
+    updateLive();
+    renderThread();
+    show('scr-place');
+  }
+  function updateLive(){
+    var p = state.place;
+    var n = p.live;
+    var txt = n > 0 ? '● ' + n + ' here right now · a count, never a coordinate'
+                    : 'quiet right now · the place is yours';
+    $('place-rel').textContent = txt;
+    $('gen-status').textContent = txt;
+  }
+  $('place-back').addEventListener('click', back);
+  $('place-search').addEventListener('input', function(){
+    state.placeFilter = this.value;
+    renderThread();
+  });
+  $('place-live').addEventListener('click', function(){
+    var p = state.place;
+    if (p.live > 0){ toast(p.live + ' people here right now — a count, never a coordinate'); }
+    else { toast('nobody here right now — the place is yours'); }
+  });
+  $('place-info').addEventListener('click', function(){
+    var p = state.place;
+    openDialog(p.name, [
+      { name:'Voices', desc:p.moments + ' moments left here' },
+      { name:'Deepest', desc:p.deepest },
+      { name:'Live', desc:(p.live > 0 ? p.live + ' here right now' : 'quiet right now') + ' — a count, never a coordinate' },
+      { name:'You', desc:'your position never leaves this phone' }
+    ]);
+  });
+  $('them-btn').addEventListener('click', function(){
+    var p = state.place;
+    var dur = 8 + Math.floor(Math.random() * 8);
+    p.voices.push({ dir:'in', dur:dur, meta:'heard just now · logged by you' });
+    renderThread();
+    var sc = $('msg-scroll'); sc.scrollTop = sc.scrollHeight;
+    $('gen-status').textContent = 'Voice logged ✓ — marked as heard here, not dropped by you';
+  });
+  $('send-btn').addEventListener('click', function(){
+    var inp = $('msg-input');
+    var txt = inp.value.trim();
+    if (!txt){ toast('Type a note first'); return; }
+    var p = state.place;
+    p.voices.push({ dir:'out', text:txt, meta:'just now' });
+    inp.value = '';
+    renderThread();
+    var sc = $('msg-scroll'); sc.scrollTop = sc.scrollHeight;
+    $('gen-status').textContent = 'Note left ✓ — it stays at this place';
+  });
+  $('record-btn').addEventListener('click', function(){
+    state.intention = null;
+    openRecord(state.place || PLACES[0]);
+  });
+  $('intent-btn').addEventListener('click', function(){
+    openDialog('Intentional drop', [
+      { name:'Reply', desc:'answers the newest voice at this place' },
+      { name:'Greet', desc:'for whoever stands here after you' },
+      { name:'Mark', desc:'tag this moment at this place — an anniversary can find it later' }
+    ], function(name){
+      state.intention = name;
+      openRecord(state.place || PLACES[0]);
+    });
+  });
+
+  /* live count drift — the place breathes */
+  setInterval(function(){
+    PLACES.forEach(function(p){
+      if (p.live > 0){
+        p.live = Math.max(0, p.live + (Math.random() < .5 ? -1 : 1));
+        if (p === state.place) updateLive();
+        if ($('scr-home').classList.contains('active')) renderHome();
+      }
+    });
+  }, 9000);
+
+  /* ---------------- record ---------------- */
+  function openRecord(p){
+    state.place = p;
+    state.recStage = 'idle';
+    state.intention = state.intention || null;
+    $('rec-status').textContent = '● you\'re standing in ' + p.name;
+    $('rec-main').textContent = '🎤 Start recording';
+    $('rec-main').classList.remove('btn-ghost'); $('rec-main').classList.add('btn-primary');
+    $('rec-discard').style.display = 'none';
+    $('rec-bars-row').style.display = 'none';
+    $('rec-timer').style.display = 'none';
+    $('rec-idle-copy').style.display = 'block';
+    $('rec-note').textContent = 'no retakes after it sinks — it\'s a moment, not a message';
+    show('scr-record');
+  }
+  var recT = 0, recInterval = null;
+  $('rec-back').addEventListener('click', function(){
+    if (state.recStage === 'recording'){ clearInterval(recInterval); }
+    resetRec();
+    back();
+  });
+  function resetRec(){
+    clearInterval(recInterval);
+    state.recStage = 'idle';
+    $('rec-bars-row').style.display = 'none';
+    $('rec-timer').style.display = 'none';
+  }
+  $('rec-main').addEventListener('click', function(){
+    var main = $('rec-main');
+    if (state.recStage === 'idle'){
+      state.recStage = 'recording';
+      recT = 0;
+      $('rec-idle-copy').style.display = 'none';
+      $('rec-bars-row').style.display = 'flex';
+      $('rec-timer').style.display = 'block';
+      $('rec-bars').innerHTML = genBars(22, 2.3);
+      main.textContent = '■ Stop';
+      main.classList.remove('btn-primary'); main.classList.add('btn-ghost');
+      recInterval = setInterval(function(){
+        recT++;
+        $('rec-timer').textContent = fmt(recT) + ' / 0:15';
+        if (recT >= 15) stopRec();
+      }, 1000);
+      $('rec-bars').classList.add('live');
+    } else if (state.recStage === 'recording'){
+      stopRec();
+    } else if (state.recStage === 'review'){
+      sinkRec();
+    }
+  });
+  function stopRec(){
+    clearInterval(recInterval);
+    if (recT < 1){ recT = 1; }
+    state.recStage = 'review';
+    var bars = $('rec-bars'); bars.classList.remove('live');
+    $('rec-timer').textContent = fmt(recT) + ' / 0:15 · listen before it sinks';
+    var main = $('rec-main');
+    main.textContent = '✓ Let it sink';
+    main.classList.remove('btn-ghost'); main.classList.add('btn-primary');
+    $('rec-discard').style.display = 'block';
+    $('rec-note').textContent = 'sinking is final — it plays for whoever stands here next';
+  }
+  function sinkRec(){
+    state.recStage = 'sunk';
+    var p = state.place;
+    var intent = state.intention ? state.intention.toLowerCase() + ' · ' : '';
+    p.voices.push({ dir:'out', dur:recT, meta:intent + 'just now', chip:'✓ sunk · plays for whoever stands next', chipDone:true });
+    p.moments++;
+    toast('voice sunk ✓ — it waits for whoever stands next');
+    resetRec();
+    $('rec-main').textContent = '🎤 Start recording';
+    $('rec-discard').style.display = 'none';
+    $('rec-idle-copy').style.display = 'block';
+    setTimeout(function(){
+      if (state.stack[state.stack.length - 2] === 'scr-place'){
+        back();                       /* return to the already-open place */
+        renderThread();
+        var sc = $('msg-scroll'); sc.scrollTop = sc.scrollHeight;
+      } else {
+        openPlace(p);                 /* came from home — open it fresh */
+        var sc2 = $('msg-scroll'); sc2.scrollTop = sc2.scrollHeight;
+      }
+    }, 900);
+  }
+  $('rec-discard').addEventListener('click', function(){
+    toast('discarded — nothing was dropped');
+    resetRec();
+    $('rec-main').textContent = '🎤 Start recording';
+    $('rec-main').classList.remove('btn-ghost'); $('rec-main').classList.add('btn-primary');
+    $('rec-discard').style.display = 'none';
+    $('rec-idle-copy').style.display = 'block';
+  });
+
+  /* ---------------- settings ---------------- */
+  $('set-back').addEventListener('click', back);
+  $('myplaces-row').addEventListener('click', function(){ renderMyPlaces(); show('scr-myplaces'); });
+  $('deepest-row').addEventListener('click', function(){ openPlace(PLACES[3]); });
+  $('data-row').addEventListener('click', function(){
+    openDialog('Data & storage', [
+      { name:'On this device', desc:'47 moments · 8.2 MB' },
+      { name:'Voices', desc:'stored where they were dropped — never uploaded' },
+      { name:'Location', desc:'your position never leaves this phone' }
+    ]);
+  });
+  $('about-row').addEventListener('click', function(){
+    openDialog('About', [
+      { name:'how far 1.0 (build 1)', desc:'the ground remembers what people left where they stood' },
+      { name:'Place memory', desc:'voices live at places, not on servers' },
+      { name:'Live counts', desc:'a count, never a coordinate' },
+      { name:'Wherever you are', desc:'est. wherever you are' }
+    ]);
+  });
+  document.querySelectorAll('#settings-root .row[data-toast]').forEach(function(r){
+    r.addEventListener('click', function(){ toast(r.getAttribute('data-toast')); });
+  });
+  function wireToggle(rowId, swId, onMsg, offMsg){
+    $(rowId).addEventListener('click', function(){
+      var sw = $(swId);
+      sw.classList.toggle('on');
+      toast(sw.classList.contains('on') ? onMsg : offMsg);
+    });
+  }
+  wireToggle('alerts-trow', 'alerts-sw', 'Standing alerts on', 'Standing alerts off');
+  wireToggle('ghost-trow', 'ghost-sw', 'Ghost mode on — you\'re invisible in live counts', 'Ghost mode off');
+  wireToggle('livecount-trow', 'livecount-sw', 'Live counts on', 'Live counts hidden');
+
+  var PRECISION = [
+    { name:'Block', desc:'shows the neighbourhood, never the corner', ex:'e.g. "somewhere in rumuokoro"' },
+    { name:'Street', desc:'shows the street you\'re standing on', ex:'e.g. "on market road"' },
+    { name:'Exact', desc:'the place itself — needed to drop voices', ex:'e.g. "at the junction"' }
+  ];
+  $('precision-row').addEventListener('click', function(){
+    openDialog('Location precision', PRECISION.map(function(o, i){
+      return { name:o.name, desc:o.desc, ex:o.ex, current: i === state.precision, pick:i };
+    }), function(name, idx){
+      state.precision = idx;
+      $('precision-sub').textContent = 'active: ' + name.toLowerCase() +
+        (idx === 2 ? ' · voices can be dropped ✓' : ' · browse only, no dropping');
+    });
+  });
+
+  /* ---------------- my places ---------------- */
+  $('mp-back').addEventListener('click', back);
+  function renderMyPlaces(){
+    var list = $('mp-list');
+    list.innerHTML = '';
+    PLACES.forEach(function(p, i){
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div class="c"><div class="t"></div><div class="s"></div></div><span class="chev">›</span>';
+      row.querySelector('.t').textContent = p.name;
+      row.querySelector('.s').textContent = p.moments + ' moments · deepest ' + p.deepest;
+      row.addEventListener('click', function(){ openPlace(p); });
+      list.appendChild(row);
+      if (i < PLACES.length - 1){
+        var d = document.createElement('div'); d.className = 'divider'; list.appendChild(d);
+      }
+    });
+    var total = PLACES.reduce(function(a, p){ return a + p.moments; }, 0);
+    $('myplaces-sub').textContent = PLACES.length + ' places · ' + total + ' moments';
+  }
+
+  /* ---------------- dialog (Ui.showLevelPicker clone) ---------------- */
+  var dialogCb = null;
+  function openDialog(title, items, cb){
+    dialogCb = cb || null;
+    var d = $('dialog');
+    var html = '<div class="dtitle"></div>';
+    items.forEach(function(it){
+      html += '<div class="pick' + (it.current ? ' cur' : '') + '" data-name="' + it.name.replace(/"/g, '') + '"' +
+              (typeof it.pick === 'number' ? ' data-pick="' + it.pick + '"' : '') + '>' +
+              '<div class="ph">' + (it.current ? '✓ ' : '') + it.name + '</div>' +
+              (it.desc ? '<div class="pd">' + it.desc + '</div>' : '') +
+              (it.ex ? '<div class="pe">' + it.ex + '</div>' : '') +
+              '</div>';
+      if (items.indexOf(it) < items.length - 1) html += '<div class="divider"></div>';
+    });
+    html += '<button class="btn sm dlg-close">Cancel</button>';
+    d.innerHTML = html;
+    d.querySelector('.dtitle').textContent = title;
+    d.querySelectorAll('.pick').forEach(function(pk){
+      if (pk.hasAttribute('data-pick') || !pk.querySelector('.pd') || dialogCb){
+        pk.addEventListener('click', function(){
+          if (dialogCb){
+            var idx = pk.getAttribute('data-pick');
+            dialogCb(pk.getAttribute('data-name').trim(), idx !== null ? parseInt(idx, 10) : 0);
+          }
+          closeDialog();
+        });
+      } else {
+        pk.addEventListener('click', closeDialog);
+      }
+    });
+    d.querySelector('.dlg-close').addEventListener('click', closeDialog);
+    $('overlay').classList.add('show');
+  }
+  function closeDialog(){ $('overlay').classList.remove('show'); dialogCb = null; }
+  $('overlay').addEventListener('click', function(e){ if (e.target === this) closeDialog(); });
+
+  /* ---------------- boot ---------------- */
+  renderHome();
+  $('msg-input').addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('send-btn').click(); }
+  });
+})();
+</script>
+</body>
+</html>
