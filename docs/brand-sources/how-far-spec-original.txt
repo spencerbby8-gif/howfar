@@ -1,0 +1,706 @@
+================================================================================
+H O W   F A R ?
+The complete product specification
+================================================================================
+Status:        PLANNING ONLY. Nothing has been built.
+Date:          30 September 2026
+Author:        Planning sessions (Arena Agent Mode)
+Companions:    howfar-brand.html      (visual identity + five screens)
+               howfar-icons.html     (app icon concepts)
+               howfar-marks.html     (round 2, rejected)
+               howfar-marks-v2.html  (round 3, rejected)
+               sediment-architecture.md (technical detail, pre-rename)
+
+This document is the single source of truth for what we are building.
+If something is not in here, it is not decided.
+
+
+================================================================================
+01  THE NAME
+================================================================================
+
+    how far?
+
+Lowercase. Spoken. Nigerian Pidgin for "what's up."
+
+The name was chosen because every successful social network is spoken before
+it is written. WhatsApp is literally "what's up." TikTok is a sound. Facebook
+is two common words fused. BeReal is a sentence. None of them are abstractions.
+
+THE NAME HAS THREE MEANINGS, AND TWO ARE THE PRODUCT:
+
+    1. "How far?" = what's up?
+       A greeting. The thing you say when you arrive somewhere.
+
+    2. "How far down?"
+       This is literally the core gesture of the app. The user drags down
+       through a place's history. The name IS the interaction.
+
+    3. "How far back?"
+       How old is this place's memory? Every anniversary screen writes itself.
+
+PASSED: two syllables, unmisspellable, works as a verb ("let me how-far this
+corner"), already in people's mouths, rooted in the culture we are building
+from rather than imported from California.
+
+DOMAINS (verified by RDAP lookup, 29 Sep 2026)
+    howfar.io       AVAILABLE   <- primary
+    howfar.earth    AVAILABLE   <- secondary, thematically strong
+    howfar.co       AVAILABLE
+    howfar.xyz      AVAILABLE
+    howfar.com      TAKEN
+    howfar.app      TAKEN
+
+TRADEMARK
+    File HOWFAR as a single word mark for software. NOT the two-word phrase,
+    which protects weakly. Get a clearance search first (~$300 via attorney).
+    NOTE: the USPTO API was unreachable during planning, so the federal
+    register is the one thing in this document that has NOT been checked.
+
+REJECTED NAMES (with reasons, so we never relitigate them)
+    Slick          There is literally a social media app called Slick. Indian
+                   Gen-Z compliment app, $1.6M raised, 1M+ users, and a data
+                   breach exposing 153,000 children's records (TechCrunch).
+                   slick.com registered since 1995 with all four client locks.
+    All The Way    Common phrase. Descriptive, so near-zero trademark
+                   protection. Three words fail the icon and bar tests.
+    Serenemayors   Available, but 7 syllables and reads as a typo.
+    Resonate       resonate.com/.app taken. Resonate Co-operative is a real,
+                   funded, UK-Parliament-cited music streaming co-op in the
+                   exact "ethical alternative" position we would claim.
+                   Eight apps already on iOS including Resonate Chat.
+    Aether         aether.com/.app taken. There is an open-source P2P social
+                   network called Aether (getaether.net, ~1,250 GitHub stars).
+                   Also: it is the name of the user's own existing repo.
+                   Also: aether means the void, the space between things --
+                   the literal opposite of ground.
+    Laterite       Our prior favourite. laterite.app/.io/.co/.earth all free,
+                   zero store collisions, semantically perfect (red West
+                   African soil). Rejected because it is a textbook word that
+                   lives on a page, not in a mouth. You cannot say "let me
+                   laterite this corner."
+    Lekki          A wealthy Lagos district. Naming a social network after one
+                   neighbourhood tells everyone outside it the app is not for
+                   them, which kills the network effect everywhere else.
+    TIKITEMP       The "TIKI-" prefix brands us as a TikTok parasite. iOS
+                   search already returns TikTok downloader utilities for it.
+    Laylow         Laylo is a funded Y Combinator company (S20) in fan
+                   messaging -- $5M+, 10,000 creators, backed by Eldridge and
+                   Kevin Mayer (ex-TikTok CEO). Also "lay low" means to be
+                   invisible, which is an anti-social-network name.
+    Others         snowtime / snowlight (wrong hemisphere), summertime
+                   (seasonal; .app taken), freetime (means idle time; both
+                   taken), dorime (2022 meme; .com taken), senorita (hit
+                   song; 4 syllables), hol on (means "wait"), beetween
+                   (deliberate misspelling kills word of mouth), immortals
+                   (.app taken; Ubisoft games), wassup/waddup (confusingly
+                   similar to WhatsApp), absolite/absoram/absimen/abstalite
+                   (free only because nobody has ever needed these words).
+
+
+================================================================================
+02  WHAT IT IS
+================================================================================
+
+ONE SENTENCE
+    The ground remembers. You can only leave something where you've actually
+    stood.
+
+THE PITCH
+    You walk up to a corner. You open the app. It shows you what other people
+    left in the ground there -- voices, sounds, 15 seconds each. You can only
+    add your own while you are physically standing on that spot. What you drop
+    sinks. What everyone else dropped before you has sunk further, and you dig
+    down to find it.
+
+    Your city has a memory. It is made of everyone who was actually there.
+
+FIVE PRIMITIVES -- change one and the product changes
+
+    P1  PLACE IS THE ATOM
+        The unit of organisation is a location, not a person. There are no
+        profiles to follow. You carry places.
+
+    P2  PRESENCE-GATED WRITE
+        You can only add to a place while physically inside it. Verified
+        on-device. Location is never transmitted, stored or shown.
+
+    P3  DEPTH, NOT RECENCY
+        Content is ordered by age-strata. Older = deeper = harder to reach,
+        and more valuable when found.
+
+    P4  PRESENCE IS A COUNT, NEVER A COORDINATE
+        Liveness is an integer. "6 here right now." Nobody can ever see where
+        you are. This is the line Zenly crossed and the line we do not cross.
+
+    P5  LOCAL-FIRST
+        A drop is written to device storage instantly and always succeeds.
+        Sync is opportunistic. If the network fails, the product does not.
+
+
+================================================================================
+03  WHY THIS AND NOT ANOTHER FEED
+================================================================================
+
+We researched the failures. Every one died the same three ways.
+
+    BeReal      Ritual without accumulation. Best mechanic in the industry,
+                ~40% daily-usage decline, cloned by Instagram and TikTok in
+                one quarter. A clever mechanic creates a spike; nothing
+                compounds.
+    Yik Yak     Anonymity -> toxicity -> school bans. No business model.
+                Raised $73.5M, sold for $1M.
+    Zenly       35M MAU, zero monetisation, killed by its parent.
+    Recho,      "Drop a pin for strangers." Nobody cares about strangers'
+    VoicePin,   pins. Empty on first open, so never opened twice.
+    WhisprGeo
+    Lapse,      The constraint IS the product. Constraints are copyable.
+    Dispo
+    Poparazzi   Great mechanic (you can only post photos OF friends, not of
+                yourself). Slowed after fast start -- no retention hook.
+    Cluster,    Useful utilities, not networks. No daily reason to open.
+    Groupsy
+
+THE THREE FAILURE MODES THIS ARCHITECTURE IS BUILT TO AVOID
+
+    1. THE EMPTY ROOM
+       Every failed app requires other people to already be there. Day one is
+       empty, so day two never happens.
+       OUR FIX: a place with nothing in it is not an empty state, it is an
+                invitation. "Nothing here yet. You're the first."
+
+    2. RITUAL WITHOUT ACCUMULATION
+       OUR FIX: the strata accumulate. Every day the ground gets deeper. Year
+                three of a place is uncatchable by a competitor.
+
+    3. NO BUSINESS MODEL
+       OUR FIX: high-intent local advertising -- the most valuable ad
+                inventory in existence, and the one Meta is structurally
+                worst at serving. A club's Saturday night IS its marketing.
+
+
+================================================================================
+04  THE CORE LOOP
+================================================================================
+
+    1. You walk into a place.
+    2. The app (on-device geofence, low power) recognises you are here.
+    3. It shows you the memory of this place -- voices left by people who
+       stood here before you, ordered by depth.
+    4. You hold to record. Fifteen seconds. Voice, ambient sound, whatever.
+    5. You let go. It sinks into the ground with a visible ripple.
+    6. It waits there for whoever stands next.
+
+THE RETURN HOOK
+    You walk past a place you have seeded and it glows differently for you.
+    Someone added to it. Your mark grew.
+
+THE EMOTIONAL PAYLOAD
+    You just left something in the ground for a stranger, in the exact square
+    metre where you stood.
+
+
+================================================================================
+05  THE STRATA ENGINE
+================================================================================
+
+Depth is DERIVED from age, never stored. depth_state is a materialised cache
+of a pure function of age. This matters because the age thresholds will change
+as we learn what feels right, and derived depth makes that a config change
+rather than a migration.
+
+    LAYER        AGE          COLOUR      STATE
+    Surface      0 - 1 h      #FFF3D0     Loud, full colour. Default view on
+                                          arrival.
+    Fresh        1 - 24 h     #FFC24A     Muted but warm. Default view.
+    Recent       1 - 7 d      #FF8A5B     Scroll within the place.
+    Settling     7 - 30 d     #E2607E     Scroll.
+    Sediment     1 - 6 mo     #A45BA8     DIG -- deliberate pull-down gesture.
+    Deep         6 - 12 mo    #5B5BA8     Dig.
+    Bedrock      1 y +        #3E4E60     Anniversaries + "on this day, here".
+
+THE PRODUCT INSIGHT BAKED IN
+    Sediment and bedrock are deliberately HARDER to reach. Friction is not a
+    bug here -- it is what makes finding something old feel like discovery
+    instead of scrolling.
+
+    Getting older makes content DEEPER, not deader. Instagram archives (nobody
+    visits). Snapchat deletes. Fade hard-deletes at 24h. FlashFeed deletes or
+    extends. Nobody has built "older = more precious."
+
+Reclassification runs as a background sweep every 15 minutes over only the
+places touched in that window. Never scan the table.
+
+
+================================================================================
+06  SCREENS
+================================================================================
+
+There is no feed, no tabs, no profile grid. Every screen is a view of ground.
+The only primary action in the entire app is HOLD TO DROP.
+
+--- 01 THE GROUND ----------------------------------------------------------
+    A living topographic surface, not a map with pins. Places are POOLS OF
+    LIGHT, not markers. Size = volume of moments. Colour = how alive the
+    surface is right now. No labels unless you zoom in.
+    Your position is a single Halo point. It is never shared with anyone.
+    Bottom: one "hold to drop" bar. Nothing else.
+
+--- 02 A PLACE -------------------------------------------------------------
+    A vertical cross-section of time. Each band is a stratum. Drag DOWN to
+    dig. As you descend the palette cools and the overlapping voices get
+    quieter and slower until it is almost geological.
+    Bottom band is bedrock: "Two years ago, here -- 4 voices."
+
+--- 03 DROP ----------------------------------------------------------------
+    One gesture. Hold anywhere on the ring; it fills over 15 seconds.
+    Release and the moment physically sinks with a ripple.
+    Copy underneath never changes: "Let go and it sinks. It waits for
+    whoever stands next."
+
+--- 04 MY GROUND -----------------------------------------------------------
+    Not a grid of your posts. A TERRAIN -- every place you have left something
+    in forms a contour peak, coloured by how long ago you were last there.
+    Stats: Places / Moments / Deepest. There is no follower number anywhere.
+
+--- 05 LIVE ----------------------------------------------------------------
+    "6 here right now." A count, never a coordinate. Below it, the place's own
+    history ticking -- new surfaces appear at the top in surface-white and
+    cool as they age downward.
+
+
+================================================================================
+07  BRAND
+================================================================================
+
+COLOUR
+
+    BASALT (the ground -- chrome)
+        #0B0908   void, deepest backdrop
+        #14110E   basalt, app background
+        #1D1915   raised, cards and sheets
+        #2E2721   seam, borders and dividers
+        #4A3B2E   loam, earth midtone
+        #D9C4A6   bone, secondary text
+        #F2E9DC   chalk, primary text
+
+        Basalt is deliberately WARM. X is #000000 and reads dead. Basalt
+        carries brown and iron undertones -- soil, not a terminal.
+
+    HALO (a voice in the dark -- the accent)
+        #FFE3B0   wash, text on halo
+        #FFC46B   halo light, active states
+        #FFB627   halo, primary action and the "you are here" dot
+        #E08C12   halo deep, pressed
+
+        Halo is the only saturated colour in the chrome and it means exactly
+        one thing: someone is here, alive, right now. Nothing else may use it.
+
+    STRATA SPECTRUM (hue = depth -- see section 05)
+        Hot at the surface, cooling as you descend, like a thermal map or
+        cooling iron. The colour is LOAD-BEARING: remove it and you remove
+        the mechanic. Nobody can copy the look without copying the product.
+
+        This is our "rainbow" -- and it is structural, not decorative.
+        We rejected a decorative rainbow because owning a rainbow means
+        owning nothing (Meta owns blue; you can say the word) and because
+        in 2026 the multicolour gradient is the most overused visual
+        signature in AI and crypto branding.
+
+TYPE
+        Wordmark   System sans, weight 700, lowercase, tight tracking
+                   (-0.045em) on "how". The word "far" is set with each
+                   letter progressively wider spaced (+0.10em, +0.24em) so
+                   the word physically enacts distance as you read it.
+                   Only the question mark is coloured, in Halo.
+        UI face    System sans throughout.
+        Serif      Appears only in place names and numerals that matter.
+
+RADII
+        Cards 12dp · Fields 10dp · Buttons 14dp · Bubbles 14dp
+        Button height pinned at 52dp.
+
+MOTION -- ONE RULE
+        Every animation must be INFORMATION. Pulse = activity. Sink =
+        committed. Dig sweep = depth. Nothing bounces for delight.
+        No confetti, no like-explosions, no pull-to-refresh spinner.
+        Restraint is what makes it feel expensive.
+
+        The sink     Releasing a moment animates it downward into the ground
+                     with a single ripple. Weight, gravity, finality.
+        The dig      Dragging through strata sweeps light across each band
+                     in sequence, top to bottom. You feel yourself going down.
+        The pulse    Places breathe. A place being dropped into right now
+                     pulses faster and brighter -- you can see life from a
+                     distance without any notification.
+
+VOICE -- THE COPY WRITES ITSELF
+        Empty state   "Nothing here yet. You're the first."
+        Dig prompt    "How far down?"
+        Permission    "It only works where you are. Nothing stored, nothing
+                      tracked."
+        After a drop  "Sunk. It waits for whoever stands next."
+        Bedrock       "Two years down. Four voices."
+        Anniversary   "One year ago, you stood here."
+        Notification  "Someone answered you at Rumuokoro."
+        Onboarding    "How far back does your city go?"
+
+        NEVER SAY: "Welcome!" · "Connect with friends" · "Post" · "Like" ·
+        "Follow" · "Trending" · "Discover". Every one of those belongs to the
+        thing we are replacing.
+
+STATUS: ICON NOT YET FINALISED
+        Four rounds drawn. Rounds 1-3 rejected as too abstract / too
+        "old school" / too much like a 1970s identity manual. Round 4
+        (howfar-icons.html) is built on the correct insight -- social marks
+        are OBJECTS (Snapchat is a ghost, TikTok is a note, Telegram is a
+        plane), not geometric compositions.
+        CURRENT RECOMMENDATION: "The Buried Bubble" -- a speech bubble with
+        its tail pointing DOWN into the strata. It is the only candidate that
+        reads as social and ground simultaneously.
+        THIS IS THE ONE OPEN DECISION IN THE BRAND.
+
+
+================================================================================
+08  WHAT THIS APP REFUSES
+================================================================================
+
+Each of these is a structural refusal, not an oversight. If one appears, the
+product is broken.
+
+    FOLLOWER COUNTS      You follow places, not people. No number is attached
+                         to any human anywhere in the app.
+    INFINITE SCROLL      Every surface has a bottom. Reach bedrock, you have
+                         reached the end. On purpose.
+    ALGORITHMIC FEED     Strict chronology, ordered by depth. Nothing ranks.
+                         Nothing optimises for engagement.
+    LIVE LOCATION        The brightest line. Presence is an integer, never a
+                         coordinate. Zenly died of this.
+    RED BADGES           Notifications only ever concern a place you have
+                         left something in. Never social pressure.
+    LIKES                You can add your own moment in reply. You cannot
+                         rate someone else's.
+    EDITING / FILTERS    Capture is final. No retakes. Lapse and The Roll
+                         proved people want this.
+    SHARING OUT          A moment belongs to the ground it was dropped in.
+                         It does not travel.
+
+
+================================================================================
+09  TECHNICAL ARCHITECTURE
+================================================================================
+
+SHAPE
+
+    Local-first is non-negotiable. The device store is the source of truth;
+    the server is a replica. A drop never fails because of a network.
+    Realtime is separated from the API because presence counts and surface
+    updates have completely different scaling properties from CRUD.
+
+    CLIENT (React Native / Expo)
+      GPS + WiFi + BLE -> Presence Engine (on-device, nothing leaves)
+                       -> Local Store (SQLite + files, source of truth)
+                       -> Sync Engine (opportunistic)
+                              |
+                              | HTTPS / WS
+              +---------------+---------------+
+              v               v               v
+        API (Go or       Realtime        Object Store
+         Elixir)         (Channels)      (Cloudflare R2)
+         places          presence counts  audio blobs
+         moments         live surfaces    ~45KB each
+         attestation                      immutable
+              |               |
+              v               v
+        Postgres +       Redis
+        PostGIS + H3     presence + pubsub
+
+DATA MODEL
+
+    place
+        id, centroid (geography Point 4326), h3_cells, name (null until
+        crowd-confirmed), moment_count, surface_count, presence_count
+        (ephemeral, Redis, never persisted), steward_id, created_at
+
+        PLACES ARE DISCOVERED, NOT DEFINED. They emerge from the density of
+        moments. This matters because it means the product works in Lagos and
+        Port Harcourt, where POI databases are terrible.
+        Algorithm: H3 at resolution 12 (~307 m2). DBSCAN over moment
+        centroids nightly. Merge cells sharing an edge above a density
+        threshold. Recompute incrementally.
+
+    moment
+        id, place_id, author_id (pseudonymous, no public profile),
+        point (rounded to ~5m), duration_s (max 15), audio_key, image_key
+        (null), created_at, depth_state, attestation (jsonb),
+        attestation_tier (0-4), parent_id (null), status
+
+    Critical index: every read in the app is place -> moments ordered by
+    created_at desc, filtered by depth band. That is one index.
+
+PRESENCE VERIFICATION -- TIERED
+
+    We are not overselling this. No consumer presence system is unspoofable.
+    The goal is not cryptographic certainty, it is making faking ANNOYING.
+
+    Tier 0   GPS geofence only. Beats nobody. Trivially spoofed.
+    Tier 1   + WiFi BSSID set. Beats remote spoofing -- you must actually
+             see the access points.
+    Tier 2   + barometric/altitude. Adds vertical disambiguation.
+    Tier 3   CO-PRESENCE ATTESTATION. BLE challenge/response with other
+             devices in the same place; each signs the other's ephemeral
+             token. Beats fake farms -- you need real bodies in the room.
+             Modelled on the GAEN / Exposure Notification protocol:
+             rotating ephemeral identifiers changing every ~15 min, derived
+             from a daily key held only on-device. The server verifies
+             internal consistency and time-adjacency, and CANNOT learn who
+             was there or where.
+    Tier 4   Venue QR / NFC for clubs, venues, events.
+
+CO-PRESENCE ATTESTATION DOES DOUBLE DUTY
+    The same BLE channel that proves you were there also carries offline mesh
+    gossip. At a Port Harcourt concert with 5,000 phones and dead data,
+    moments still spread device to device. One device that eventually reaches
+    the network uploads the batch, signed by the originators.
+
+    Instagram cannot function without a connection. At that concert, THE
+    CROWD IS THE NETWORK. One primitive, two payoffs.
+
+LIVELINESS
+
+    Signal              Mechanism                              Target
+    Presence count      Client heartbeat on entering a place    < 2 s
+                        (local geofence trigger). Redis with
+                        TTL. Broadcast as integer only.
+    Surface ticker      New moment -> LISTEN/NOTIFY ->          < 1 s
+                        fan-out to place subscribers.
+    Place pulse         Client-side from surface velocity.       0
+                        No round trip.
+    Your places         Push when someone drops in a place      < 30 s
+                        you have seeded. The ONLY push.
+
+    The heartbeat sends place_id + a rotating token. It NEVER sends
+    coordinates. No way to query who. No history retained. Counts expire.
+
+    DELIBERATELY NOT LIVE: no typing indicators, no read receipts, no
+    "X is online", no live location of any human, ever.
+
+BUDGETS
+
+    Audio: Opus, mono, 24 kbps, 15 s  =  ~45 KB
+    Optional image: WebP q60, 720p    =  ~40 KB
+    Metadata + attestation            =  < 1 KB
+    Typical drop                      =  ~45 KB (audio only)
+
+    One Instagram photo is 200-500 KB. One TikTok loop is 1-5 MB.
+    A drop is roughly ONE TWENTIETH of a photo and ONE HUNDREDTH of a TikTok.
+    At ~$0.50/GB in Nigeria, a hundred drops cost less than one TikTok
+    scroll session.
+
+    Session target: < 100 KB excluding drops. Pre-fetch the surface layer
+    for the 20 places nearest your predicted route, on WiFi only.
+
+    Infra at 100k MAU: Postgres+PostGIS ~$180 · Redis ~$40 · R2 storage ~$8
+    · R2 egress $0 · Realtime ~$60 · Map tiles ~$20  =  ~$310/month.
+    Zero-egress R2 is not a minor optimisation, it is a strategic choice.
+    Egress is the line item that destroys social apps in emerging markets.
+
+STACK
+
+    Mobile     React Native via Expo -- Android-first, AND EAS Build produces
+               the iOS binary in the cloud so no Mac is ever needed.
+    Map        MapLibre GL + Protomaps (self-hosted tiles, flat cost).
+               Google/Mapbox billing would be the largest cost in the company.
+    Backend    Elixir/Phoenix preferred (PubSub + Presence are purpose-built
+               for our liveliness model). Go + Fastify acceptable alternative.
+    Database   Postgres + PostGIS + h3 extension.
+    Cache      Redis (TTL'd counters, pubsub backplane).
+    Storage    Cloudflare R2 (zero egress).
+    Audio      Opus, mono, 24 kbps.
+    Local DB   SQLite (expo-sqlite) + expo-file-system. Local-first requires
+               a real local store, not AsyncStorage.
+
+
+================================================================================
+10  BUSINESS MODEL
+================================================================================
+
+High-intent local advertising is the most valuable ad inventory in existence,
+and Meta is structurally bad at it.
+
+    VENUES OWN THEIR TIMELINE     A club's Saturday night IS its marketing.
+                                  A restaurant's sediment is its proof.
+    "WHAT'S HAPPENING HERE        Local, immediate, high intent.
+     TONIGHT"
+    SPONSORED DIGS                City-level cultural archives, anniversaries.
+    PRIVATE PLACE-MEMORY          Paid personal archive of everywhere you
+                                  have been.
+
+
+================================================================================
+11  THE AFRICA CARD
+================================================================================
+
+This architecture fits the next billion in a way no incumbent can match.
+
+    AUDIO-NATIVE      Voice notes are already the native format of African
+                      mobile. ~1GB at $0.50 in Nigeria. Audio is an order of
+                      magnitude cheaper than video.
+    OFFLINE-TOLERANT  Pre-fetch the timelines of places you are heading to;
+                      upload when you have signal. Every incumbent assumes
+                      always-on broadband.
+    ANDROID-FIRST     ~75%+ of downloads. Entry-level handsets are getting
+                      MORE expensive (76% of monthly income for the poorest
+                      20% in Sub-Saharan Africa, GSMA 2026), so small
+                      payloads are not a nice-to-have, they are the product.
+    CULTURALLY        "The story of a place, told by those who were there"
+      NATIVE          is the village square and the oral tradition. It is not
+                      imported Silicon Valley software wearing an African
+                      flag. The name itself is Pidgin.
+
+
+================================================================================
+12  MARKET CONTEXT (researched, September 2026)
+================================================================================
+
+    Gen Z is pruning: ~32% deleted a social app in the last 12 months; the
+    average number of platforms adults use is DECLINING.
+    The winners are small, participatory, niche: Partiful, Geneva, Fizz,
+    Beli, Corner.
+    Corner raised $7.5M for a social map (July 2026) -- validation that the
+    map-social lane is hot, and a competitor to watch.
+    Proof-of-human is CROWDED and well funded: World ID ships into Tinder,
+    Zoom, Docusign, Okta. OpenAI is building a biometric social network.
+    PRSN launched a motion-verified human-only network (June 2026).
+    We get authenticity by ARCHITECTURE instead of biometrics.
+    Offline mesh messaging exists (Briar, Bridgefy, BitChat) but burns ~4x
+    battery. India tried to ban all three in July 2026.
+    Moltbook, a social network for AI agents, was acquired by Meta in
+    March 2026. The dead-internet problem is real and getting worse.
+
+
+================================================================================
+13  BUILD SEQUENCE
+================================================================================
+
+Not a schedule -- a dependency order. Each phase ends with something you can
+put in a human's hand.
+
+    PHASE 0  FAKE IT
+             A clickable prototype. No backend.
+             Answers: does the dig gesture feel good? Do people pull down
+             without being told to?
+
+    PHASE 1  PROOF OF PRESENCE
+             Two phones. Prove tier-1 and tier-3 attestation works, in a real
+             location, with GPS spoofing attempted.
+             Answers: can we actually gate this?
+
+    PHASE 2  ONE PLACE, REAL
+             Full drop -> sink -> strata -> playback loop, server-backed, one
+             physical location seeded by hand.
+
+    PHASE 3  THE GROUND
+             Map surface, clustering, glow, offline store-and-forward.
+
+    PHASE 4  LIVENESS
+             Presence counts, surface ticker, your-places notifications.
+
+    PHASE 5  MESH
+             BLE gossip. Test at a real event with dead signal.
+
+    PHASE 6  MODERATION
+             Place stewards, quarantine, reporting. REQUIRED before any real
+             launch. Yik Yak skipped this and died.
+
+    DO NOT START AT PHASE 3. The temptation is to build the map because it is
+    the impressive part. The map is worthless if presence-gating does not hold.
+
+
+================================================================================
+14  RISKS
+================================================================================
+
+    RISK                          SEVERITY   MITIGATION
+    Cold start in sparse areas    HIGH       Seed via venues and events, not
+                                             geography. A club has density on
+                                             night one; a street does not.
+    Privacy backlash / stalking   HIGH       Presence-as-integer is the
+                                             structural answer. Publish the
+                                             architecture. Never add live
+                                             location, no matter how much
+                                             retention data begs for it.
+    Moderation at place level     HIGH       Place stewards + the natural
+                                             friction that you must physically
+                                             return to a place to harass it.
+    Battery on low-end Android    MEDIUM     Aggressive BLE duty cycling
+                                             (5s scan every 60s, only inside
+                                             active places). Measure on a
+                                             cheap device in Port Harcourt,
+                                             not an iPhone.
+    iOS background geofencing     MEDIUM     Apple restricts far more than
+                                             Android. Android-first is a
+                                             genuine advantage, not a
+                                             compromise.
+    Presence spoofing             MEDIUM     Tiered attestation. Accept
+                                             imperfection -- TikTok's entire
+                                             business is trivially botted and
+                                             it works.
+    NOBODY WANTS TO DROP          FATAL      Test this first, with no app at
+                                             all. See section 15.
+
+
+================================================================================
+15  THE ONLY TEST THAT MATTERS
+================================================================================
+
+Everything else is engineering. The single risk that matters is whether
+strangers will leave something in the ground for other strangers.
+
+THE RUMUOKORO JUNCTION TEST -- zero code required
+
+    1. Print a sign. Put it at one busy Port Harcourt location. It says:
+           "Leave 15 seconds for the next person who stands here.
+            Send a voice note to this WhatsApp number."
+    2. Run it for one week.
+    3. Count submissions. Ask each person one question: would you come back
+       to hear what others left?
+
+    PASS    50 people drop in a week and 30 say they would return.
+            Then this is real.
+    FAIL    3 people drop. No amount of engineering saves it -- and you will
+            have spent a week instead of a year finding that out.
+
+
+================================================================================
+16  IMMEDIATE NEXT ACTIONS
+================================================================================
+
+    1. Register howfar.io and howfar.earth today. ~$60 total.
+    2. Trademark clearance search for HOWFAR as a single word mark.
+    3. Grab @howfar on X, Instagram, TikTok and a GitHub org before the
+       domains go public.
+    4. Run the Rumuokoro Junction test (section 15).
+    5. Only after step 4 comes back positive: build Phase 0, then Phase 1.
+
+    DO NOT START BUILDING YET. Step 4 costs one week and a printed sign.
+    Everything after it costs months. Test the human behaviour before you
+    test the engineering.
+
+
+================================================================================
+OPEN DECISIONS
+================================================================================
+
+    1. THE ICON.          Four rounds drawn, none accepted. Recommendation is
+                          "The Buried Bubble" in howfar-icons.html.
+    2. TRADEMARK CLEARANCE. USPTO API unreachable during planning. Unchecked.
+    3. LAUNCH CITY.       Port Harcourt first (home advantage, data-cost
+                          story) vs a dense global city (easier density).
+                          Not yet decided.
+    4. SOLO OR TEAM.      This has a real backend -- geofencing, attestation,
+                          strata, mesh sync. Resourcing is unresolved.
+
+================================================================================
+END
+================================================================================
