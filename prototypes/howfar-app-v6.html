@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>how far</title>
+<style>
+/* ================================================================
+   how far — v6 · the app on how far's own architecture
+   chassis: ReplyMate UI kit, locked (identical tokens to v5)
+   architecture: how-far-spec.txt + howfar-architecture.md
+     · home = the ground (pools of light + near-you rows)
+     · a place = strata bands, dig boundary, bedrock floor
+     · drop = hold the ring, release = sunk. no review.
+     · presence-gated writes · a count, never a coordinate
+     · no search · audio only · answers, not likes
+   ================================================================ */
+:root{
+  --bg:#0D1117; --card:#161B22; --accent:#0A84FF; --text:#FFFFFF; --dim:#AAB2BD;
+  --red:#FF6B6B; --green:#3FB950; --field:#11161D; --stroke:#2A3139;
+  --bin:#1C2330; --bout:#1E3250;
+  /* content semantics (never chrome): strata + brand */
+  --flare:#FF4A1C; --volt:#C6FF3D;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%; margin:0;}
+body{background:#000; font-family:Roboto,"Helvetica Neue",-apple-system,"Segoe UI",Arial,sans-serif;
+  color:var(--text); font-size:14px; overflow:hidden;}
+#frame{max-width:480px; height:100dvh; margin:0 auto; background:var(--bg);
+  position:relative; overflow:hidden; display:flex; flex-direction:column;}
+
+/* status bar */
+#statusbar{flex:none; height:30px; display:flex; justify-content:space-between; align-items:center;
+  padding:0 16px; font-size:12px; color:rgba(255,255,255,.85); background:var(--bg);}
+#statusbar .sicons{display:flex; align-items:center; gap:6px;}
+.sig{display:flex; align-items:flex-end; gap:1.5px; height:11px;}
+.sig i{width:2.5px; background:rgba(255,255,255,.85); border-radius:.5px;}
+.sig i:nth-child(1){height:4px;} .sig i:nth-child(2){height:6.5px;}
+.sig i:nth-child(3){height:9px;} .sig i:nth-child(4){height:11px;}
+.batt{width:20px; height:10px; border:1px solid rgba(255,255,255,.6); border-radius:2.5px; position:relative;}
+.batt::after{content:""; position:absolute; inset:1.5px 6px 1.5px 1.5px; background:rgba(255,255,255,.85);}
+
+/* screens = activities, single stack, no tabs */
+#screens{flex:1; position:relative; overflow:hidden; background:var(--bg);}
+.screen{position:absolute; inset:0; background:var(--bg); display:none; flex-direction:column;}
+.screen.active{display:flex;}
+.screen.slide{animation:act_in .19s ease-out;}
+@keyframes act_in{from{opacity:.3; transform:translateX(26px);} to{opacity:1; transform:none;}}
+.scroll{flex:1; overflow-y:auto; min-height:0;}
+.scroll::-webkit-scrollbar{width:0;}
+
+/* ---- ReplyMate kit (unchanged from v5) ---- */
+.p20{padding:20px;}
+.h1{font-size:24px; font-weight:700; margin:0;}
+.h1.backlink{cursor:pointer; display:inline-block;}
+.sub{font-size:12px; color:var(--dim); margin:2px 0 0;}
+.statusline{font-size:12px; color:var(--accent); margin-top:10px; cursor:default;}
+.statusline.ok{color:var(--green);} .statusline.warn{color:#F0B450; cursor:pointer;}
+.privacyline{font-size:11px; color:var(--dim); margin-top:6px;}
+.btn{display:block; width:100%; background:#3E4448; border:none; color:var(--text);
+  font-family:inherit; font-size:14px; font-weight:500; text-transform:uppercase; letter-spacing:.03em;
+  padding:13px 16px; border-radius:2px; cursor:pointer; margin-top:16px;}
+.btn:active{background:#33393d;}
+.btn-primary{display:block; width:100%; background:var(--accent); border:none; color:#fff;
+  font-family:inherit; font-size:16px; font-weight:700; min-height:52px; border-radius:14px;
+  cursor:pointer; margin-top:14px; position:relative; overflow:hidden; user-select:none; touch-action:none;}
+.btn-primary:active{background:#0871d8;}
+.btn-primary .lbl{position:relative; z-index:2;}
+.btn-primary .hfill{position:absolute; inset:0; background:#0a6fd4; transform-origin:left; transform:scaleX(0); z-index:1;}
+.btn-primary.disabled{opacity:.45;}
+.btn-ghost{display:block; width:100%; background:transparent; border:1px solid #3DFFFFFF; color:var(--text);
+  font-family:inherit; font-size:16px; min-height:52px; border-radius:14px; cursor:pointer; margin-top:8px;}
+.btn-ghost:active{background:rgba(255,255,255,.05);}
+.field{display:block; width:100%; background:var(--field); border:1px solid var(--stroke); border-radius:10px;
+  color:var(--text); font-family:inherit; font-size:15px; padding:12px; outline:none;}
+.row{display:flex; align-items:center; padding:14px 0; cursor:pointer;}
+.row .c{flex:1; min-width:0;}
+.row .t{font-size:16px;}
+.row .s{font-size:13px; color:var(--dim); margin-top:2px;}
+.row .chev{font-size:22px; color:var(--dim); font-weight:400; flex:none; margin-left:8px;}
+.divider{height:1px; background:var(--stroke);}
+.label{font-size:12px; color:var(--dim); padding:12px 0 4px;}
+.trow{display:flex; align-items:center; padding:10px 4px 10px 0; cursor:pointer;}
+.trow .c{flex:1; min-width:0;}
+.trow .t{font-size:16px;}
+.trow .s{font-size:13px; color:var(--dim); margin-top:2px;}
+.sw{flex:none; width:38px; height:20px; border-radius:20px; background:#3a4046; position:relative;
+  margin-left:12px; transition:background .15s;}
+.sw::after{content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
+  background:#fff; transition:left .15s;}
+.sw.on{background:var(--accent);}
+.sw.on::after{left:20px;}
+.card{background:var(--card); border-radius:12px; padding:14px;}
+
+/* logo — the one brand element in the chrome */
+.logo{display:inline-block; vertical-align:middle;}
+.logo .ldot{transform-box:fill-box; transform-origin:center; animation:ldot 2.4s ease-in-out infinite;}
+@keyframes ldot{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+
+/* splash (ReplyMate glow + ring) */
+#scr-splash{align-items:center; justify-content:center; text-align:center;}
+.splash-wrap{position:relative; width:170px; height:170px; display:flex; align-items:center; justify-content:center;}
+.splash-glow{position:absolute; inset:-45px; border-radius:50%;
+  background:radial-gradient(circle, rgba(10,132,255,.22) 0%, rgba(10,132,255,.1) 45%, rgba(10,132,255,0) 72%);}
+.splash-ring{position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(10,132,255,.4);}
+#scr-splash .h1{margin-top:20px;}
+
+/* ---- 01 the ground ---- */
+.home-head{display:flex; align-items:center;}
+.home-head .tt{flex:1; min-width:0;}
+.home-head .tt .nm{display:flex; align-items:center; gap:9px;}
+.gear{font-size:24px; color:var(--dim); padding:8px; cursor:pointer; background:none; border:none; font-family:inherit;}
+.surface{position:relative; height:330px; margin-top:14px; overflow:hidden;
+  background:radial-gradient(340px 200px at 50% 40%, #10161f 0%, var(--bg) 75%);}
+.surface svg.topo{position:absolute; inset:0; width:100%; height:100%;}
+.pool{position:absolute; transform:translate(-50%,-50%); cursor:pointer; border-radius:50%; padding:0; border:none; background:none; font-family:inherit;}
+.pool .glow{position:absolute; inset:0; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(255,243,208,.34), rgba(255,243,208,.10) 52%, transparent 72%);}
+.pool.alive .glow{background:radial-gradient(closest-side, rgba(255,243,208,.5), rgba(255,243,208,.16) 52%, transparent 72%);
+  animation:poolpulse 2.6s ease-in-out infinite;}
+.pool.quiet .glow{animation:poolpulse 7s ease-in-out infinite;}
+@keyframes poolpulse{0%,100%{transform:scale(1); opacity:.75}50%{transform:scale(1.07); opacity:1}}
+.pool .seedring{position:absolute; inset:-7px; border-radius:50%; border:1.5px solid rgba(255,74,28,.55);}
+.pool .plabel{position:absolute; top:calc(100% + 12px); left:50%; transform:translateX(-50%);
+  font-size:11px; color:var(--dim); white-space:nowrap;}
+.pool .answered{position:absolute; top:calc(100% + 26px); left:50%; transform:translateX(-50%);
+  font-size:10px; color:var(--flare); white-space:nowrap;}
+.you-dot{position:absolute; width:13px; height:13px; border-radius:50%; background:var(--flare);
+  box-shadow:0 0 16px rgba(255,74,28,.9); transform:translate(-50%,-50%); z-index:5; pointer-events:none;}
+.you-ring{position:absolute; width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,74,28,.6);
+  transform:translate(-50%,-50%); z-index:4; pointer-events:none; animation:ypulse 3s ease-out infinite;}
+@keyframes ypulse{0%{transform:translate(-50%,-50%) scale(.5); opacity:.9}100%{transform:translate(-50%,-50%) scale(1.5); opacity:0}}
+.groundbar-note{font-size:11px; color:var(--dim); text-align:center; margin-top:6px;}
+
+/* ---- 02 a place = strata ---- */
+.conv-head{display:flex; align-items:center; padding:16px;}
+.conv-back{font-size:28px; color:var(--accent); padding:0 12px 0 4px; cursor:pointer; flex:none; line-height:1;}
+.conv-tt{flex:1; min-width:0;}
+.conv-name{font-size:18px; font-weight:700;}
+.conv-rel{font-size:12px; color:var(--dim); margin-top:1px;}
+.conv-act{font-size:14px; color:var(--accent); padding:8px; cursor:pointer; flex:none; background:none; border:none; font-family:inherit;}
+#msg-scroll{padding:0 16px;}
+.msg-list{display:flex; flex-direction:column; padding-bottom:8px;}
+.bandhead{display:flex; align-items:center; gap:8px; margin:18px 0 2px;}
+.bandhead .bdot{width:8px; height:8px; border-radius:50%; flex:none;}
+.bandhead span.bl{font-size:12px; color:var(--dim); letter-spacing:.08em; text-transform:uppercase;}
+.bandhead:first-child{margin-top:6px;}
+.band.new{animation:bandin .5s ease both;}
+@keyframes bandin{from{opacity:0; transform:translateY(16px);} to{opacity:1; transform:none;}}
+.bubble{max-width:80%; border-radius:14px; padding:10px 12px; margin-top:8px;}
+.bubble.in{background:var(--bin); align-self:flex-start;}
+.bubble.out{background:var(--bout); align-self:flex-end; margin-left:48px; cursor:pointer;}
+.bubble.in{cursor:pointer;}
+.bubble .chip{font-size:11px; font-weight:700; margin-bottom:4px; color:var(--accent);}
+.bubble .chip.done{color:var(--green);}
+.bubble .chip.found{color:var(--volt);}
+.brow{display:flex; align-items:center; gap:9px;}
+.pbtn{width:28px; height:28px; border-radius:50%; border:none; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; flex:none; font-size:11px; padding:0; color:#0D1117;}
+.bars{display:flex; align-items:center; gap:2px; height:18px; flex:1;}
+.bars i{width:2px; border-radius:1px; background:var(--dim); height:6px;}
+.bubble.out .bars i{background:#B9CCE4;}
+.bars.live i{animation:bdance 1s ease-in-out infinite;}
+@keyframes bdance{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
+.bdur{font-size:13px; flex:none;}
+.bmeta{font-size:11px; color:var(--dim); margin-top:5px;}
+/* dig boundary — deliberate friction */
+.digzone{margin-top:18px; text-align:center; padding-bottom:6px;}
+.digbtn{width:100%; background:transparent; border:1px solid #3DFFFFFF; border-radius:14px; color:var(--text);
+  font-family:inherit; min-height:52px; cursor:pointer; position:relative; overflow:hidden; user-select:none; touch-action:none;}
+.digbtn:active{background:rgba(255,255,255,.05);}
+.digbtn .dl{position:relative; z-index:2; font-size:15px; font-weight:700;}
+.digbtn .dl small{display:block; font-size:11px; color:var(--dim); font-weight:400; margin-top:2px;}
+.digbtn .hfill{position:absolute; inset:0; background:rgba(10,132,255,.28); transform-origin:left; transform:scaleX(0); z-index:1;}
+/* bedrock = the floor */
+.bedrock{margin-top:22px; text-align:center; padding-bottom:10px;}
+.bedrock .stmt{font-size:18px; font-weight:700; line-height:1.4;}
+.bedrock .floor{font-size:11px; color:var(--dim); margin-top:6px;}
+.anniv{display:inline-block; margin-top:12px; font-size:11px; color:#F2E9DC; border:1px dashed rgba(242,233,220,.4);
+  border-radius:99px; padding:5px 12px;}
+.bubble.bedrocked{opacity:.55;}
+/* composer zone — conditional (presence-gated write) */
+#composer-zone{flex:none;}
+.composer{background:var(--card); padding:12px; border-top:1px solid var(--stroke);}
+.composer .btn-primary{margin-top:0;}
+.notstanding{padding:12px 16px 4px; font-size:12px; color:var(--accent);}
+.walklink{display:block; padding:0 16px 12px; font-size:11px; color:var(--dim); font-style:italic;
+  background:none; border:none; font-family:inherit; cursor:pointer; text-align:left; width:100%;}
+
+/* ---- 03 drop — the ring ---- */
+#scr-drop .scroll{display:flex; flex-direction:column;}
+.drop-body{display:flex; flex-direction:column; align-items:center; padding:8px 20px 30px;}
+.rec-status{font-size:12px; color:var(--green); margin-top:10px; align-self:flex-start;}
+.parentnote{font-size:11px; color:var(--dim); margin-top:4px; align-self:flex-start;}
+.ringwrap{position:relative; width:230px; height:230px; margin:26px auto 0; cursor:pointer;
+  user-select:none; touch-action:none;}
+.ringwrap svg{position:absolute; inset:0; transform:rotate(-90deg);}
+.ringwrap .ringmsg{position:absolute; inset:24px; border-radius:50%; border:1px solid var(--stroke);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;}
+.ringwrap .rtimer{font-size:20px;}
+.ringwrap .rtimer b{color:var(--accent); font-weight:500;}
+.ringwrap .rbars{display:flex; align-items:center; gap:2.5px; height:24px;}
+.ringwrap .rbars i{width:3px; border-radius:2px; background:var(--accent); height:8px;}
+.ringwrap .rbars.live i{animation:bdance 1s ease-in-out infinite;}
+.ringwrap .rhint{font-size:10px; color:var(--dim); letter-spacing:.14em; text-transform:uppercase;}
+.drop-copy{margin-top:24px; text-align:center; font-size:14px; line-height:1.6; color:var(--text);}
+.drop-copy b{color:var(--accent); font-weight:700;}
+.sinkfx{position:absolute; left:50%; top:50%; width:12px; height:12px; margin:-6px; border-radius:50%;
+  background:var(--volt); z-index:9; opacity:0; pointer-events:none;}
+.sinkfx.go{animation:sinkdrop 1s cubic-bezier(.5,0,.9,.4) forwards;}
+@keyframes sinkdrop{0%{opacity:1; transform:translateY(0) scale(1)}100%{opacity:0; transform:translateY(130px) scale(.35)}}
+.sinkripple{position:absolute; left:50%; top:50%; width:60px; height:60px; margin:-30px; border-radius:50%;
+  border:1.5px solid var(--volt); z-index:8; opacity:0; pointer-events:none;}
+.sinkripple.go{animation:sinkripple 1.1s ease-out forwards;}
+@keyframes sinkripple{0%{opacity:.9; transform:scale(.4)}100%{opacity:0; transform:scale(2.6)}}
+
+/* ---- 04 my ground ---- */
+.statrow{display:flex; gap:9px; margin-top:14px;}
+.stat{flex:1; text-align:center; padding:13px 6px 11px; background:var(--card); border-radius:12px;}
+.stat b{display:block; font-size:22px; font-weight:700;}
+.stat span{display:block; font-size:12px; color:var(--dim); margin-top:3px;}
+.nofollow{font-size:11px; color:var(--dim); text-align:center; padding:16px 0 4px;}
+
+/* ---- 05 live ---- */
+.livenum{text-align:center; padding:26px 0 6px;}
+.livenum .n{font-size:64px; font-weight:700; line-height:1; color:var(--text);}
+.livenum p{margin:8px 0 0; font-size:12px; color:var(--dim);}
+.livenum .priv{display:inline-block; margin-top:10px; font-size:11px; color:var(--dim);
+  border:1px solid var(--stroke); border-radius:99px; padding:4px 11px;}
+.tickhead{display:flex; align-items:center; gap:10px; margin:16px 0 2px; padding:0 2px;}
+.tickhead .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); animation:ldot 2s ease-in-out infinite;}
+.tickhead span{font-size:12px; color:var(--dim);}
+.tickhead .line{flex:1; height:1px; background:var(--stroke);}
+.tick{display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--stroke);}
+.tick .tdot{width:7px; height:7px; border-radius:50%; flex:none;}
+.tick .ttxt{flex:1; font-size:13px;}
+.tick .ttime{font-size:11px; color:var(--dim); flex:none;}
+
+/* toast + dialog (kit) */
+#toast{position:absolute; left:50%; bottom:72px; transform:translateX(-50%) translateY(8px);
+  background:#22272e; color:#fff; font-size:13px; padding:10px 18px; border-radius:22px;
+  opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; z-index:60; white-space:nowrap; max-width:92%;}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+#overlay{position:absolute; inset:0; background:rgba(0,0,0,.6); display:none; z-index:50;
+  align-items:center; justify-content:center; padding:28px;}
+#overlay.show{display:flex;}
+.dialog{background:#1a1f26; border-radius:4px; padding:18px 16px 10px; width:100%; max-width:340px;
+  max-height:80%; overflow-y:auto;}
+.dialog .dtitle{font-size:18px; font-weight:700; margin-bottom:8px;}
+.pick{padding:10px 0; cursor:pointer;}
+.pick .ph{font-size:16px;}
+.pick.cur .ph{color:var(--accent); font-weight:700;}
+.pick .pd{font-size:13px; color:var(--dim); margin-top:2px;}
+.dlg-close{width:auto; margin:10px 0 4px; align-self:flex-end; padding:8px 16px;}
+</style>
+</head>
+<body>
+<div id="frame">
+
+  <div id="statusbar">
+    <span id="clock">18:20</span>
+    <span class="sicons">
+      <span class="sig"><i></i><i></i><i></i><i></i></span>
+      <span style="font-size:10px;">5G</span>
+      <span class="batt"></span>
+    </span>
+  </div>
+
+  <div id="screens">
+
+    <!-- 00 SPLASH -->
+    <section class="screen active" id="scr-splash">
+      <div class="splash-wrap">
+        <div class="splash-glow"></div>
+        <div class="splash-ring"></div>
+        <svg class="logo" width="86" height="77" viewBox="0 0 112 100" aria-label="how far">
+          <g transform="translate(8,-7)">
+            <circle cx="40" cy="58" r="24" fill="none" stroke="#C6FF3D" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+            <circle cx="88" cy="24" r="11" fill="#C6FF3D"/>
+          </g>
+          <circle cx="40" cy="58" r="24" fill="none" stroke="#FF4A1C" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+          <circle class="ldot" cx="88" cy="24" r="11" fill="#FF4A1C"/>
+        </svg>
+      </div>
+      <h1 class="h1">how far</h1>
+      <p class="sub">the ground remembers</p>
+    </section>
+
+    <!-- 01 THE GROUND -->
+    <section class="screen" id="scr-ground">
+      <div class="scroll">
+        <div class="p20" style="padding-bottom:0;">
+          <div class="home-head">
+            <div class="tt">
+              <div class="nm">
+                <svg class="logo" width="24" height="21" viewBox="0 0 112 100" aria-hidden="true">
+                  <g transform="translate(8,-7)"><circle cx="40" cy="58" r="24" fill="none" stroke="#C6FF3D" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/><circle cx="88" cy="24" r="11" fill="#C6FF3D"/></g>
+                  <circle cx="40" cy="58" r="24" fill="none" stroke="#FF4A1C" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-38 40 58)"/>
+                  <circle cx="88" cy="24" r="11" fill="#FF4A1C"/>
+                </svg>
+                <span class="h1">how far</span>
+              </div>
+              <p class="sub">what people left where they stood</p>
+            </div>
+            <button class="gear" id="gear-btn" aria-label="settings">⚙</button>
+          </div>
+
+          <div class="statusline ok" id="ground-status">● you're standing in rumuokoro junction</div>
+          <div class="privacyline">your position never leaves this phone · voices stay where they were dropped</div>
+
+          <div class="surface" id="surface">
+            <svg class="topo" viewBox="0 0 440 330" preserveAspectRatio="none" aria-hidden="true">
+              <g fill="none" stroke="rgba(170,178,189,0.07)" stroke-width="1">
+                <ellipse cx="120" cy="90" rx="90" ry="50"/><ellipse cx="120" cy="90" rx="58" ry="30"/>
+                <ellipse cx="320" cy="120" rx="110" ry="64"/><ellipse cx="320" cy="120" rx="70" ry="40"/>
+                <ellipse cx="100" cy="240" rx="80" ry="46"/><ellipse cx="100" cy="240" rx="48" ry="26"/>
+                <ellipse cx="300" cy="255" rx="95" ry="55"/><ellipse cx="300" cy="255" rx="58" ry="32"/>
+              </g>
+            </svg>
+            <!-- pools injected -->
+          </div>
+
+          <button class="btn-primary" id="ground-drop"><span class="lbl">hold to drop</span><span class="hfill" id="ground-drop-fill"></span></button>
+          <div class="groundbar-note">where you stand is where it sinks · it only works where you are</div>
+
+          <div class="label" style="margin-top:20px;">near you</div>
+          <div id="near-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 A PLACE = strata -->
+    <section class="screen" id="scr-place">
+      <div class="conv-head">
+        <span class="conv-back" id="place-back">‹</span>
+        <div class="conv-tt">
+          <div class="conv-name" id="place-name">rumuokoro junction</div>
+          <div class="conv-rel" id="place-rel">6 here right now · a count, never a coordinate</div>
+        </div>
+        <button class="conv-act" id="place-live">Live</button>
+        <button class="conv-act" id="place-info">Info</button>
+      </div>
+      <div class="scroll" id="msg-scroll">
+        <div class="msg-list" id="msg-list"></div>
+      </div>
+      <div id="composer-zone"></div>
+    </section>
+
+    <!-- 03 DROP — the ring -->
+    <section class="screen" id="scr-drop">
+      <div class="scroll">
+        <div class="p20 drop-body" style="align-items:stretch;">
+          <h1 class="h1"><span class="h1 backlink" id="drop-back">‹ </span>drop a voice</h1>
+          <p class="sub" style="font-size:13px;">it only works where you are</p>
+          <div class="rec-status" id="drop-status">● you're standing in rumuokoro junction</div>
+          <div class="parentnote" id="drop-parent" style="display:none;">↳ an answer to a voice below</div>
+
+          <div class="ringwrap" id="ringwrap">
+            <div class="sinkfx" id="sinkfx"></div>
+            <div class="sinkripple" id="sinkripple"></div>
+            <svg viewBox="0 0 230 230">
+              <circle cx="115" cy="115" r="108" fill="none" stroke="#2A3139" stroke-width="5"/>
+              <circle id="ring-progress" cx="115" cy="115" r="108" fill="none" stroke="#0A84FF" stroke-width="5"
+                      stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"
+                      style="transition:stroke-dashoffset .1s linear, stroke .3s;"/>
+            </svg>
+            <div class="ringmsg">
+              <div class="rtimer" id="drop-timer">0:<b>00</b> / 0:15</div>
+              <div class="rbars" id="drop-bars">
+                <i style="height:8px"></i><i style="height:16px"></i><i style="height:11px"></i>
+                <i style="height:20px"></i><i style="height:13px"></i><i style="height:18px"></i>
+                <i style="height:9px"></i><i style="height:15px"></i><i style="height:10px"></i>
+              </div>
+              <div class="rhint">hold anywhere · let go to sink</div>
+            </div>
+          </div>
+
+          <p class="drop-copy">let go and it sinks.<br><b>it waits for whoever stands next.</b></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 LIVE -->
+    <section class="screen" id="scr-live">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="live-back">‹ </span><span id="live-name">rumuokoro junction</span></h1>
+          <p class="sub" style="font-size:13px;">live · the place, not the people</p>
+          <div class="livenum">
+            <div class="n" id="live-n">6</div>
+            <p>here right now</p>
+            <span class="priv">a count, never a coordinate</span>
+          </div>
+          <div class="tickhead"><span class="dot"></span><span>the ground, ticking</span><span class="line"></span></div>
+          <div id="ticker"></div>
+          <p class="privacyline" style="margin-top:14px;">deliberately not live: who, typing, read receipts, anyone's location — ever</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="screen" id="scr-settings">
+      <div class="scroll">
+        <div class="p20" id="settings-root">
+          <h1 class="h1"><span class="h1 backlink" id="set-back">‹ </span>Settings</h1>
+
+          <div class="label">Account</div>
+          <div class="row" data-toast="Profile — coming in the next build">
+            <div class="c"><div class="t">My profile</div><div class="s">name, avatar, presence</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" data-toast="Account — coming in the next build">
+            <div class="c"><div class="t">Account</div><div class="s">email · sync across devices</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">My ground</div>
+          <div class="row" id="myplaces-row">
+            <div class="c"><div class="t">My places</div><div class="s" id="myplaces-sub">—</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="deepest-row">
+            <div class="c"><div class="t">Deepest memory</div><div class="s">old campus gate · 2 years down</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">Place sensing</div>
+          <div class="row" id="precision-row">
+            <div class="c"><div class="t">Location precision</div><div class="s" id="precision-sub">active: exact · voices can be dropped ✓</div></div><span class="chev">›</span>
+          </div>
+          <div class="trow" id="alerts-trow">
+            <div class="c"><div class="t">Standing alerts</div><div class="s">ping when someone drops where you stand</div></div>
+            <span class="sw on" id="alerts-sw"></span>
+          </div>
+
+          <div class="label">Privacy</div>
+          <div class="trow" id="ghost-trow">
+            <div class="c"><div class="t">Ghost mode</div><div class="s">invisible in the live count</div></div>
+            <span class="sw" id="ghost-sw"></span>
+          </div>
+          <div class="trow" id="livecount-trow">
+            <div class="c"><div class="t">Live counts</div><div class="s">show how many people are at each place</div></div>
+            <span class="sw on" id="livecount-sw"></span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="notif-row">
+            <div class="c"><div class="t">Notifications</div><div class="s">answers + anniversaries, at places you've seeded</div></div><span class="chev">›</span>
+          </div>
+          <div class="divider"></div>
+          <div class="row" id="data-row">
+            <div class="c"><div class="t">Data &amp; storage</div><div class="s">voices stay on this device</div></div><span class="chev">›</span>
+          </div>
+
+          <div class="label">About</div>
+          <div class="row" id="about-row">
+            <div class="c"><div class="t">About</div><div class="s">how far 1.0 · the ground remembers</div></div><span class="chev">›</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 MY GROUND -->
+    <section class="screen" id="scr-myground">
+      <div class="scroll">
+        <div class="p20">
+          <h1 class="h1"><span class="h1 backlink" id="mg-back">‹ </span>my ground</h1>
+          <p class="sub" style="font-size:13px;">everywhere you've left something</p>
+          <div class="statrow" id="mg-stats"></div>
+          <div id="mg-list" style="margin-top:8px;"></div>
+          <div class="nofollow">no follower counts. not for anyone, not anywhere, ever.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="overlay"><div class="dialog" id="dialog"></div></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* =============== data =============== */
+  /* bands: depth DERIVED from age — here expressed as an index per voice.
+     0 surface · 1 fresh · 2 recent · 3 settling · 4 sediment · 5 deep · 6 bedrock
+     sediment+ are behind the dig boundary. bedrock is the floor. */
+  var BANDS = [
+    { label:'surface · 0–1 h',  c:'#FFF3D0' },
+    { label:'fresh · 1–24 h',   c:'#FFC24A' },
+    { label:'recent · 1–7 d',   c:'#FF8A5B' },
+    { label:'settling · 7–30 d',c:'#E2607E' },
+    { label:'sediment · 1–6 mo',c:'#A45BA8' },
+    { label:'deep · 6–12 mo',   c:'#5B5BA8' },
+    { label:'bedrock · 1 y +',  c:'#3E4E60' }
+  ];
+  var FREE_BANDS = 4; /* surface..settling load on open; sediment+ takes a dig */
+
+  var PLACES = [
+    { id:'junction', name:'rumuokoro junction', live:6, moments:9, deepest:'2 years down',
+      pool:{ x:50, y:44, r:74 },
+      voices:[
+        { dir:'in',  dur:12, band:0, meta:'4 min ago' },
+        { dir:'out', dur:15, band:0, meta:'40 minutes ago' },
+        { dir:'in',  dur:11, band:1, meta:'this morning' },
+        { dir:'in',  dur:15, band:2, meta:'friday night' },
+        { dir:'in',  dur:14, band:3, meta:'three weeks back' },
+        { dir:'out', dur:10, band:3, meta:'3 weeks ago' },
+        { dir:'in',  dur:15, band:4, meta:'a voice from march', found:true },
+        { dir:'in',  dur:10, band:5, meta:'last december', found:true },
+        { dir:'in',  dur:15, band:6, meta:'the oldest here · it goes no further', found:true }
+      ]},
+    { id:'spot', name:'the spot', live:2, moments:12, deepest:'1 year down',
+      pool:{ x:77, y:20, r:50 },
+      voices:[
+        { dir:'out', dur:14, band:0, meta:'yesterday', chip:'an answer' },
+        { dir:'in',  dur:9,  band:1, meta:'2 days ago · someone answered you', chip:'an answer' },
+        { dir:'out', dur:12, band:2, meta:'3 weeks ago' },
+        { dir:'in',  dur:15, band:4, meta:'from february', found:true }
+      ]},
+    { id:'market', name:'creek market', live:0, moments:18, deepest:'1 year down',
+      pool:{ x:22, y:68, r:56 },
+      voices:[
+        { dir:'in', dur:13, band:1, meta:'4 days ago' },
+        { dir:'in', dur:8,  band:2, meta:'last week' },
+        { dir:'in', dur:11, band:3, meta:'3 weeks ago' }
+      ]},
+    { id:'gate', name:'old campus gate', live:1, moments:8, deepest:'2 years down',
+      pool:{ x:19, y:22, r:42 },
+      voices:[
+        { dir:'out', dur:15, band:3, meta:'5 months ago' },
+        { dir:'in',  dur:10, band:5, meta:'1 year ago', found:true },
+        { dir:'in',  dur:15, band:6, meta:'2 years ago · four voices down here', found:true }
+      ]},
+    { id:'unnamed', name:'unnamed place', live:0, moments:0, deepest:'—',
+      pool:{ x:74, y:80, r:30 },
+      voices:[] }
+  ];
+
+  var state = {
+    stack:['scr-splash'],
+    place:null,
+    standing:PLACES[0],        /* simulated GPS fix */
+    locationOn:true,
+    dugMax:{},                 /* placeId -> highest loaded band index */
+    parent:null,               /* answer target while dropping */
+    precision:2
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var screens = document.querySelectorAll('.screen');
+
+  function seeded(p){ return p.voices.some(function(v){ return v.dir === 'out'; }); }
+  function answered(p){ return p.voices.some(function(v){ return v.dir === 'in' && v.chip === 'an answer'; }); }
+
+  /* =============== router =============== */
+  function show(id, push){
+    var el = $(id);
+    if (!el) return;
+    if (push !== false && state.stack[state.stack.length - 1] !== id) state.stack.push(id);
+    for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+    el.classList.add('active');
+    el.classList.remove('slide'); void el.offsetWidth; el.classList.add('slide');
+  }
+  function back(){
+    if (state.stack.length > 1) state.stack.pop();
+    show(state.stack[state.stack.length - 1], false);
+  }
+
+  /* =============== toast =============== */
+  var toastTimer = null;
+  function toast(msg){
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2300);
+  }
+
+  /* =============== clock =============== */
+  function tickClock(){
+    var d = new Date();
+    var h = d.getHours(), m = d.getMinutes();
+    $('clock').textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+  tickClock(); setInterval(tickClock, 15000);
+
+  /* =============== splash =============== */
+  var splashTimer = setTimeout(enterApp, 2200);
+  function enterApp(){
+    clearTimeout(splashTimer);
+    if (state.stack[state.stack.length - 1] === 'scr-splash') show('scr-ground', true);
+  }
+  $('scr-splash').addEventListener('click', enterApp);
+
+  /* =============== shared: hold-to-commit =============== */
+  function makeHold(btnId, fillId, ms, canStart, onCommit, onEarly){
+    var btn = $(btnId), fill = $(fillId);
+    var holding = false, t0 = 0, raf = null, done = false;
+    function step(ts){
+      if (!holding || done) return;
+      var p = Math.min(1, (ts - t0) / ms);
+      if (fill) fill.style.transform = 'scaleX(' + p + ')';
+      if (p >= 1){ done = true; holding = false; onCommit(); setTimeout(reset, 250); return; }
+      raf = requestAnimationFrame(step);
+    }
+    function reset(){
+      if (raf) cancelAnimationFrame(raf);
+      holding = false;
+      if (fill){
+        fill.style.transition = 'transform .3s ease';
+        fill.style.transform = 'scaleX(0)';
+        setTimeout(function(){ fill.style.transition = 'none'; }, 320);
+      }
+    }
+    function begin(e){
+      if (done) return;
+      e.preventDefault();
+      if (canStart && !canStart()){ onEarly && onEarly(); return; }
+      holding = true; t0 = performance.now();
+      raf = requestAnimationFrame(step);
+    }
+    function end(){
+      if (!holding) return;
+      if (performance.now() - t0 < ms){ reset(); if (onEarly) onEarly(); }
+    }
+    btn.addEventListener('mousedown', begin);
+    btn.addEventListener('touchstart', begin, {passive:false});
+    btn.addEventListener('mouseup', end);
+    btn.addEventListener('mouseleave', function(){ if (holding) end(); });
+    btn.addEventListener('touchend', end);
+  }
+
+  /* =============== 01 the ground =============== */
+  function renderGround(){
+    /* status line */
+    var st = $('ground-status');
+    if (state.locationOn){
+      st.className = 'statusline ok';
+      st.textContent = '● you\'re standing in ' + state.standing.name;
+    } else {
+      st.className = 'statusline warn';
+      st.textContent = 'Location is off — tap to enable (it only works where you are)';
+    }
+    var bar = $('ground-drop');
+    bar.classList.toggle('disabled', !state.locationOn);
+
+    /* pools */
+    var surf = $('surface');
+    surf.querySelectorAll('.pool,.you-dot,.you-ring').forEach(function(n){ n.remove(); });
+    PLACES.forEach(function(p){
+      var btn = document.createElement('button');
+      btn.className = 'pool ' + (p.live > 0 ? 'alive' : 'quiet');
+      btn.style.left = p.pool.x + '%';
+      btn.style.top = p.pool.y + '%';
+      btn.style.width = btn.style.height = (p.pool.r * 2) + 'px';
+      var html = '<span class="glow"></span>';
+      if (seeded(p)) html += '<span class="seedring"></span>';
+      html += '<span class="plabel"></span>';
+      if (answered(p)) html += '<span class="answered">◈ someone answered you</span>';
+      btn.innerHTML = html;
+      btn.querySelector('.plabel').textContent = p.name;
+      btn.setAttribute('aria-label', p.name);
+      btn.addEventListener('click', function(){ openPlace(p); });
+      surf.appendChild(btn);
+    });
+    var dot = document.createElement('span'); dot.className = 'you-dot';
+    dot.style.left = state.standing.pool.x + '%'; dot.style.top = (state.standing.pool.y + 3) + '%';
+    var ring = document.createElement('span'); ring.className = 'you-ring';
+    ring.style.left = state.standing.pool.x + '%'; ring.style.top = (state.standing.pool.y + 3) + '%';
+    surf.appendChild(ring); surf.appendChild(dot);
+
+    /* near you rows */
+    var list = $('near-list');
+    list.innerHTML = '';
+    PLACES.forEach(function(p, i){
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div class="c"><div class="t"></div><div class="s"></div></div><span class="chev">›</span>';
+      row.querySelector('.t').textContent = p.name + (p === state.standing ? '  · you\'re here' : '');
+      var s = (p.live > 0 ? '● ' + p.live + ' here now · ' : '') +
+              (seeded(p) ? 'yours · ' : '') +
+              (p.voices.length ? lastPreview(p) : 'nothing here yet — you\'re the first');
+      row.querySelector('.s').textContent = s;
+      row.addEventListener('click', function(){ openPlace(p); });
+      list.appendChild(row);
+      if (i < PLACES.length - 1){
+        var d = document.createElement('div'); d.className = 'divider'; list.appendChild(d);
+      }
+    });
+  }
+  function lastPreview(p){
+    var v = null;
+    for (var i = 0; i < p.voices.length; i++){ if (p.voices[i].band <= 3){ v = p.voices[i]; } }
+    v = v || p.voices[0];
+    if (!v) return '';
+    return (v.dir === 'out' ? 'you · ' : 'a voice · ') + v.meta + ' · 0:' + (v.dur < 10 ? '0' : '') + v.dur;
+  }
+  $('ground-status').addEventListener('click', function(){
+    state.locationOn = !state.locationOn;
+    renderGround();
+    if (!state.locationOn) toast('Location off — you can browse, but not drop');
+  });
+  makeHold('ground-drop', 'ground-drop-fill', 1000,
+    function(){ return state.locationOn; },
+    function(){ openDrop(state.standing, null); },
+    function(){
+      if (!state.locationOn) toast('Location is off — it only works where you are');
+      else toast('keep holding — a drop needs intent');
+    });
+  $('gear-btn').addEventListener('click', function(){ show('scr-settings'); });
+
+  /* =============== 02 a place = strata =============== */
+  function fmt(s){ return '0:' + (s < 10 ? '0' : '') + s; }
+  function genBars(n, seed){
+    var html = '';
+    for (var i = 0; i < n; i++){
+      var h = 5 + Math.abs(Math.sin(i * (seed || 1.7) * 3.1)) * 12;
+      html += '<i style="height:' + h.toFixed(0) + 'px; animation-delay:' + ((i % 5) * .12).toFixed(2) + 's"></i>';
+    }
+    return html;
+  }
+  function loadedMax(p){
+    return state.dugMax[p.id] !== undefined ? state.dugMax[p.id] : FREE_BANDS - 1;
+  }
+  function renderThread(p, animateFrom){
+    var list = $('msg-list');
+    list.innerHTML = '';
+    if (!p.voices.length){
+      var first = document.createElement('div');
+      first.style.cssText = 'text-align:center; padding:36px 12px; color:var(--dim); font-size:14px;';
+      first.textContent = 'Nothing here yet. You\'re the first.';
+      list.appendChild(first);
+      return;
+    }
+    var max = Math.min(loadedMax(p), BANDS.length - 1);
+    for (var b = 0; b <= max; b++){
+      var vs = p.voices.filter(function(v){ return v.band === b; });
+      var wrap = document.createElement('div');
+      wrap.className = 'band' + (b === animateFrom ? ' new' : '');
+      if (b === 6){
+        /* bedrock: the floor */
+        var br = document.createElement('div');
+        br.className = 'bedrock';
+        br.innerHTML = '<div class="stmt">Two years down.<br>Four voices.</div>' +
+                       '<div class="floor">this is the bottom. every place has one — on purpose.</div>' +
+                       '<span class="anniv">◈ one year ago, you stood here</span>';
+        wrap.appendChild(br);
+      } else {
+        var head = document.createElement('div');
+        head.className = 'bandhead';
+        head.innerHTML = '<span class="bdot" style="background:' + BANDS[b].c + '"></span><span class="bl"></span>';
+        head.querySelector('.bl').textContent = BANDS[b].label;
+        wrap.appendChild(head);
+      }
+      vs.forEach(function(v){ wrap.appendChild(bubbleEl(p, v, b === 6)); });
+      list.appendChild(wrap);
+    }
+    /* every surface has a bottom — on purpose */
+    if (!hasDeeper(p, max)){
+      var floor = document.createElement('div');
+      floor.className = 'bedrock';
+      floor.innerHTML = '<div class="floor" style="margin-top:18px;">the ground holds nothing deeper here — yet. every day it gets a little older.</div>';
+      list.appendChild(floor);
+    }
+    /* dig boundary — if deeper strata exist and aren't loaded */
+    if (hasDeeper(p, max)){
+      var dz = document.createElement('div');
+      dz.className = 'digzone';
+      dz.innerHTML = '<button class="digbtn" id="digbtn">' +
+        '<span class="dl">how far down?<small>hold to dig — older is deeper, and harder to reach</small></span>' +
+        '<span class="hfill" id="digbtn-fill"></span></button>';
+      list.appendChild(dz);
+      makeHold('digbtn', 'digbtn-fill', 1100, null, function(){
+        state.dugMax[p.id] = Math.min(loadedMax(p) + 1, 6);
+        renderThread(p, state.dugMax[p.id]);
+        toast('you dug into ' + BANDS[state.dugMax[p.id]].label.split(' ·')[0] + ' — found voices ✓');
+      }, function(){ toast('keep holding — the ground gives way slowly'); });
+    }
+  }
+  function hasDeeper(p, maxLoaded){
+    return p.voices.some(function(v){ return v.band > maxLoaded; });
+  }
+  function bubbleEl(p, v, bedrocked){
+    var b = document.createElement('div');
+    b.className = 'bubble ' + v.dir + (bedrocked ? ' bedrocked' : '');
+    if (v.id) b.setAttribute('data-vid', v.id);
+    if (v.chip){
+      var c = document.createElement('div');
+      c.className = 'chip' + (v.chipDone ? ' done' : '') + (v.found ? ' found' : '');
+      c.textContent = (v.found ? '◈ echo · ' : '') + v.chip;
+      b.appendChild(c);
+    } else if (v.found){
+      var cf = document.createElement('div');
+      cf.className = 'chip found';
+      cf.textContent = '◈ echo · found down here';
+      b.appendChild(cf);
+    }
+    var row = document.createElement('div');
+    row.className = 'brow';
+    var btn = document.createElement('button');
+    btn.className = 'pbtn'; btn.textContent = '▶';
+    btn.style.background = BANDS[v.band].c;
+    var bars = document.createElement('span');
+    bars.className = 'bars'; bars.innerHTML = genBars(16, v.dur);
+    var dur = document.createElement('span');
+    dur.className = 'bdur'; dur.textContent = fmt(v.dur);
+    row.appendChild(btn); row.appendChild(bars); row.appendChild(dur);
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      playBars(btn, bars, v.dur);
+    });
+    b.appendChild(row);
+    var meta = document.createElement('div');
+    meta.className = 'bmeta';
+    meta.textContent = v.meta;
+    b.appendChild(meta);
+    b.addEventListener('click', function(){ voiceDialog(p, v); });
+    return b;
+  }
+  function playBars(btn, bars, dur){
+    if (bars.classList.contains('live')) return;
+    bars.classList.add('live');
+    btn.textContent = '❚❚';
+    setTimeout(function(){ bars.classList.remove('live'); btn.textContent = '▶'; }, Math.min(dur, 6) * 1000);
+  }
+  function openPlace(p){
+    state.place = p;
+    $('place-name').textContent = p.name;
+    updateLive();
+    renderThread(p);
+    renderComposer(p);
+    show('scr-place');
+  }
+  function updateLive(){
+    var p = state.place;
+    var txt = p.live > 0 ? '● ' + p.live + ' here right now · a count, never a coordinate'
+                         : 'quiet right now · the place is yours';
+    $('place-rel').textContent = txt;
+  }
+  function renderComposer(p){
+    var zone = $('composer-zone');
+    zone.innerHTML = '';
+    if (state.standing === p && state.locationOn){
+      var card = document.createElement('div');
+      card.className = 'composer';
+      card.innerHTML = '<button class="btn-primary" id="place-drop"><span class="lbl">hold to drop here</span><span class="hfill" id="place-drop-fill"></span></button>';
+      zone.appendChild(card);
+      makeHold('place-drop', 'place-drop-fill', 1000,
+        function(){ return state.locationOn; },
+        function(){ openDrop(p, null); },
+        function(){ toast('keep holding — a drop needs intent'); });
+    } else {
+      var ns = document.createElement('div');
+      ns.className = 'notstanding';
+      ns.textContent = !state.locationOn
+        ? 'location is off — it only works where you are'
+        : 'you\'re not standing here — it only works where you are';
+      zone.appendChild(ns);
+      var walk = document.createElement('button');
+      walk.className = 'walklink';
+      walk.textContent = 'prototype · tap to walk to this place';
+      walk.addEventListener('click', function(){
+        state.standing = p;
+        toast('you walked to ' + p.name);
+        renderGround();
+        renderComposer(p);
+      });
+      zone.appendChild(walk);
+    }
+  }
+  $('place-back').addEventListener('click', back);
+  $('place-live').addEventListener('click', function(){
+    $('live-name').textContent = state.place.name;
+    renderLive();
+    show('scr-live');
+  });
+  $('place-info').addEventListener('click', function(){
+    var p = state.place;
+    openDialog(p.name, [
+      { name:'Moments', desc:p.moments + ' moments left here' },
+      { name:'Deepest', desc:p.deepest },
+      { name:'Live', desc:(p.live > 0 ? p.live + ' here right now' : 'quiet right now') + ' — a count, never a coordinate' },
+      { name:'You', desc:'your position never leaves this phone' }
+    ]);
+  });
+
+  /* voice dialog: play · answer · cancel (answers, not likes) */
+  function voiceDialog(p, v){
+    openDialog('a voice · 0:' + (v.dur < 10 ? '0' : '') + v.dur, [
+      { name:'▶ Play', desc:v.meta },
+      { name:'↳ Answer', desc:'your voice, in reply — they get the only push' },
+      { name:'Cancel', desc:'' }
+    ], function(name){
+      if (name === '▶ Play'){
+        var el = document.querySelector('[data-vid="' + v.id + '"]');
+        if (el){
+          var btn = el.querySelector('.pbtn'), bars = el.querySelector('.bars');
+          playBars(btn, bars, v.dur);
+        }
+      } else if (name === '↳ Answer'){
+        if (state.standing !== p || !state.locationOn){
+          toast('you can only answer where you stand — it only works where you are');
+        } else {
+          openDrop(p, v);
+        }
+      }
+    });
+  }
+
+  /* =============== 03 drop — the ring =============== */
+  var DROP_MAX = 15;
+  var ringT0 = 0, ringHolding = false, ringRaf = null, ringDone = false, ringPlace = null, ringParent = null;
+
+  function openDrop(p, parent){
+    ringPlace = p; ringParent = parent || null;
+    ringDone = false; ringHolding = false;
+    $('drop-status').textContent = '● you\'re standing in ' + p.name;
+    $('drop-parent').style.display = ringParent ? 'block' : 'none';
+    $('ring-progress').style.stroke = '#0A84FF';
+    $('ring-progress').style.strokeDashoffset = '100';
+    $('drop-timer').innerHTML = '0:<b>00</b> / 0:15';
+    $('drop-bars').classList.remove('live');
+    show('scr-drop');
+  }
+  function ringStep(ts){
+    if (!ringHolding || ringDone) return;
+    var held = (ts - ringT0) / 1000;
+    var p = Math.min(1, held / DROP_MAX);
+    $('ring-progress').style.strokeDashoffset = String(100 - p * 100);
+    $('drop-timer').innerHTML = '0:<b>' + String(Math.min(DROP_MAX, Math.round(held))).padStart(2, '0') + '</b> / 0:15';
+    if (p >= 1){ sink(Math.round(DROP_MAX)); return; }
+    ringRaf = requestAnimationFrame(ringStep);
+  }
+  function ringBegin(e){
+    if (ringDone) return;
+    e.preventDefault();
+    ringHolding = true; ringT0 = performance.now();
+    $('drop-bars').classList.add('live');
+    ringRaf = requestAnimationFrame(ringStep);
+  }
+  function ringEnd(){
+    if (!ringHolding || ringDone) return;
+    ringHolding = false;
+    if (ringRaf) cancelAnimationFrame(ringRaf);
+    $('drop-bars').classList.remove('live');
+    var held = (performance.now() - ringT0) / 1000;
+    if (held < 1){
+      /* mistouch guard — under 1 second drops nothing */
+      $('ring-progress').style.transition = 'stroke-dashoffset .3s ease';
+      $('ring-progress').style.strokeDashoffset = '100';
+      setTimeout(function(){ $('ring-progress').style.transition = 'stroke-dashoffset .1s linear, stroke .3s'; }, 320);
+      $('drop-timer').innerHTML = '0:<b>00</b> / 0:15';
+      toast('too quick — nothing dropped');
+    } else {
+      sink(Math.max(1, Math.round(held)));
+    }
+  }
+  $('ringwrap').addEventListener('mousedown', ringBegin);
+  $('ringwrap').addEventListener('touchstart', ringBegin, {passive:false});
+  window.addEventListener('mouseup', function(){ if (ringHolding) ringEnd(); });
+  $('ringwrap').addEventListener('touchend', function(){ if (ringHolding) ringEnd(); });
+
+  function sink(dur){
+    ringDone = true; ringHolding = false;
+    if (ringRaf) cancelAnimationFrame(ringRaf);
+    $('drop-bars').classList.remove('live');
+    $('ring-progress').style.stroke = '#C6FF3D';
+    $('ring-progress').style.strokeDashoffset = '0';
+    $('drop-timer').innerHTML = 'sunk<b>.</b>';
+    var fx = $('sinkfx'), rp = $('sinkripple');
+    fx.classList.remove('go'); void fx.offsetWidth; fx.classList.add('go');
+    rp.classList.remove('go'); void rp.offsetWidth; rp.classList.add('go');
+
+    /* write the moment locally — it always succeeds */
+    var p = ringPlace;
+    var nv = { dir:'out', dur:dur, band:0, meta:'just now',
+               chip:'✓ sunk · it waits for whoever stands next', chipDone:true };
+    if (ringParent){
+      nv.chip = '✓ sunk · an answer';
+      nv.meta = 'just now · an answer';
+      ringParent.chip = 'an answer';
+      if (!ringParent.meta.match(/an answer/)) ringParent.meta += '';
+    }
+    nv.id = p.id + '-v' + (p.voices.length + 1);
+    p.voices.unshift(nv);
+    p.moments++;
+    if (ringParent){
+      toast('push sent: "someone answered you at ' + p.name + '" — the only one there is');
+    } else {
+      toast('sunk ✓ — it waits for whoever stands next');
+    }
+    setTimeout(function(){
+      if (state.stack[state.stack.length - 2] === 'scr-place' ||
+          state.stack[state.stack.length - 2] === 'scr-ground'){
+        back();
+        if (state.place === p || state.stack[state.stack.length - 1] === 'scr-place'){
+          renderThread(p, 0);
+          renderComposer(p);
+          $('msg-scroll').scrollTop = 0;
+        }
+        renderGround();
+      } else {
+        openPlace(p);
+      }
+      ringDone = false;
+      $('ring-progress').style.strokeDashoffset = '100';
+      $('ring-progress').style.stroke = '#0A84FF';
+      $('drop-timer').innerHTML = '0:<b>00</b> / 0:15';
+    }, 1100);
+  }
+  $('drop-back').addEventListener('click', function(){ back(); });
+
+  /* =============== 05 live =============== */
+  var LIVE_EVENTS = [
+    'someone just dropped 12 seconds',
+    'a voice landed and sank',
+    'two people arrived together',
+    'someone found a voice from march, deep down',
+    'the place is filling up',
+    'a voice answered another'
+  ];
+  var liveFeed = [
+    { txt:'someone just dropped 12 seconds', t:'now' },
+    { txt:'a voice landed at the surface', t:'4 m' },
+    { txt:'the evening rush began', t:'38 m' },
+    { txt:'a voice settled into settling', t:'2 h' },
+    { txt:'the place went quiet', t:'6 h' },
+    { txt:'a voice crossed into sediment', t:'1 d' }
+  ];
+  var AGEDOT = ['#FFF3D0', '#FFC24A', '#FF8A5B', '#E2607E', '#A45BA8', '#5B5BA8', '#AAB2BD', '#AAB2BD'];
+  function renderLive(){
+    var p = state.place;
+    $('live-n').textContent = p.live;
+    var tk = $('ticker');
+    tk.innerHTML = '';
+    liveFeed.forEach(function(ev, i){
+      var row = document.createElement('div');
+      row.className = 'tick';
+      row.innerHTML = '<span class="tdot"></span><span class="ttxt"></span><span class="ttime"></span>';
+      row.querySelector('.tdot').style.background = AGEDOT[Math.min(AGEDOT.length - 1, i)];
+      var tx = row.querySelector('.ttxt');
+      tx.textContent = ev.txt;
+      if (i >= 3) tx.style.color = 'var(--dim)';
+      row.querySelector('.ttime').textContent = ev.t;
+      tk.appendChild(row);
+    });
+  }
+  $('live-back').addEventListener('click', back);
+  setInterval(function(){
+    /* the place breathes */
+    PLACES.forEach(function(p){
+      if (p.live > 0){
+        p.live = Math.max(0, p.live + (Math.random() < .5 ? -1 : 1));
+        if (p === state.place) updateLive();
+      }
+    });
+    if ($('scr-live').classList.contains('active') && state.place){
+      $('live-n').textContent = state.place.live;
+    }
+    if ($('scr-ground').classList.contains('active')) renderGround();
+    /* ticker ages */
+    if ($('scr-live').classList.contains('active')){
+      liveFeed.forEach(function(ev){ if (ev.t === 'now') ev.t = '1 m'; });
+      liveFeed.unshift({ txt:LIVE_EVENTS[Math.floor(Math.random() * LIVE_EVENTS.length)], t:'now' });
+      while (liveFeed.length > 8) liveFeed.pop();
+      renderLive();
+    }
+  }, 9000);
+
+  /* =============== settings =============== */
+  $('set-back').addEventListener('click', back);
+  $('myplaces-row').addEventListener('click', function(){ renderMyGround(); show('scr-myground'); });
+  $('deepest-row').addEventListener('click', function(){ openPlace(PLACES[3]); });
+  $('notif-row').addEventListener('click', function(){
+    openDialog('Notifications', [
+      { name:'Answers', desc:'"someone answered you at ⟨place⟩" — the only social push there will ever be' },
+      { name:'Anniversaries', desc:'"one year ago, you stood here"' },
+      { name:'Nothing else', desc:'no badges, no streaks, no noise. both only fire at places you\'ve seeded.' }
+    ]);
+  });
+  $('data-row').addEventListener('click', function(){
+    openDialog('Data & storage', [
+      { name:'On this device', desc:'every voice, stored where it was dropped' },
+      { name:'Location', desc:'your position never leaves this phone' },
+      { name:'Offline', desc:'a drop always succeeds — sync waits for signal' }
+    ]);
+  });
+  $('about-row').addEventListener('click', function(){
+    openDialog('About', [
+      { name:'how far 1.0 (build 1)', desc:'the ground remembers what people left where they stood' },
+      { name:'Place memory', desc:'voices live at places, not on servers' },
+      { name:'Live counts', desc:'a count, never a coordinate' },
+      { name:'Wherever you are', desc:'est. wherever you are' }
+    ]);
+  });
+  document.querySelectorAll('#settings-root .row[data-toast]').forEach(function(r){
+    r.addEventListener('click', function(){ toast(r.getAttribute('data-toast')); });
+  });
+  function wireToggle(rowId, swId, onMsg, offMsg){
+    $(rowId).addEventListener('click', function(){
+      var sw = $(swId);
+      sw.classList.toggle('on');
+      toast(sw.classList.contains('on') ? onMsg : offMsg);
+    });
+  }
+  wireToggle('alerts-trow', 'alerts-sw', 'Standing alerts on', 'Standing alerts off');
+  wireToggle('ghost-trow', 'ghost-sw', 'Ghost mode on — you\'re invisible in live counts', 'Ghost mode off');
+  wireToggle('livecount-trow', 'livecount-sw', 'Live counts on', 'Live counts hidden');
+  var PRECISION = [
+    { name:'Block', desc:'shows the neighbourhood, never the corner', ex:'e.g. "somewhere in rumuokoro"' },
+    { name:'Street', desc:'shows the street you\'re standing on', ex:'e.g. "on market road"' },
+    { name:'Exact', desc:'the place itself — needed to drop voices', ex:'e.g. "at the junction"' }
+  ];
+  $('precision-row').addEventListener('click', function(){
+    openDialog('Location precision', PRECISION.map(function(o, i){
+      return { name:o.name, desc:o.desc, ex:o.ex, current:i === state.precision, pick:i };
+    }), function(name, idx){
+      state.precision = idx;
+      $('precision-sub').textContent = 'active: ' + name.toLowerCase() +
+        (idx === 2 ? ' · voices can be dropped ✓' : ' · browse only, no dropping');
+    });
+  });
+
+  /* =============== 04 my ground =============== */
+  $('mg-back').addEventListener('click', back);
+  function renderMyGround(){
+    var mine = PLACES.filter(seeded);
+    var myMoments = 0, deepestIdx = -1;
+    PLACES.forEach(function(p){
+      p.voices.forEach(function(v){
+        if (v.dir === 'out'){ myMoments++; deepestIdx = Math.max(deepestIdx, v.band); }
+      });
+    });
+    $('mg-stats').innerHTML =
+      '<div class="stat"><b>' + mine.length + '</b><span>places</span></div>' +
+      '<div class="stat"><b>' + myMoments + '</b><span>moments</span></div>' +
+      '<div class="stat"><b>' + (deepestIdx >= 0 ? BANDS[deepestIdx].label.split(' ·')[0] : '—') + '</b><span>deepest</span></div>';
+    var list = $('mg-list');
+    list.innerHTML = '';
+    mine.forEach(function(p, i){
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div class="c"><div class="t"></div><div class="s"></div></div><span class="chev">›</span>';
+      row.querySelector('.t').textContent = p.name;
+      var mineCount = p.voices.filter(function(v){ return v.dir === 'out'; }).length;
+      row.querySelector('.s').textContent = 'yours · ' + mineCount + (mineCount === 1 ? ' moment' : ' moments') +
+        ' · deepest ' + p.deepest + (answered(p) ? ' · ◈ someone answered you' : '');
+      row.addEventListener('click', function(){ openPlace(p); });
+      list.appendChild(row);
+      if (i < mine.length - 1){
+        var d = document.createElement('div'); d.className = 'divider'; list.appendChild(d);
+      }
+    });
+    var total = PLACES.reduce(function(a, p){ return a + p.moments; }, 0);
+    $('myplaces-sub').textContent = mine.length + ' places · ' + myMoments + ' of your moments';
+  }
+
+  /* =============== dialog (kit) =============== */
+  var dialogCb = null;
+  function openDialog(title, items, cb){
+    dialogCb = cb || null;
+    var d = $('dialog');
+    var html = '<div class="dtitle"></div>';
+    items.forEach(function(it, i){
+      html += '<div class="pick' + (it.current ? ' cur' : '') + '" data-name="' + it.name.replace(/"/g, '') + '"' +
+              (typeof it.pick === 'number' ? ' data-pick="' + it.pick + '"' : '') + '>' +
+              '<div class="ph">' + (it.current ? '✓ ' : '') + it.name + '</div>' +
+              (it.desc ? '<div class="pd">' + it.desc + '</div>' : '') +
+              '</div>';
+      if (i < items.length - 1) html += '<div class="divider"></div>';
+    });
+    html += '<button class="btn sm dlg-close">Cancel</button>';
+    d.innerHTML = html;
+    d.querySelector('.dtitle').textContent = title;
+    d.querySelectorAll('.pick').forEach(function(pk){
+      pk.addEventListener('click', function(){
+        if (dialogCb){
+          var idx = pk.getAttribute('data-pick');
+          dialogCb(pk.getAttribute('data-name'), idx !== null ? parseInt(idx, 10) : 0);
+        }
+        closeDialog();
+      });
+    });
+    d.querySelector('.dlg-close').addEventListener('click', closeDialog);
+    $('overlay').classList.add('show');
+  }
+  function closeDialog(){ $('overlay').classList.remove('show'); dialogCb = null; }
+  $('overlay').addEventListener('click', function(e){ if (e.target === this) closeDialog(); });
+
+  /* =============== boot =============== */
+  PLACES.forEach(function(p){ p.voices.forEach(function(v, i){ v.id = p.id + '-v' + i; }); });
+  renderGround();
+})();
+</script>
+</body>
+</html>
