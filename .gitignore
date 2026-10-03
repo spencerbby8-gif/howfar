@@ -1,0 +1,14 @@
+# Node / test tooling
+node_modules/
+npm-debug.log*
+
+# Android
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.cxx/
+
+# OS
+.DS_Store

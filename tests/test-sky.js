@@ -1,6 +1,6 @@
 /* how far — the sky · full browser test suite */
 const puppeteer = require('puppeteer');
-const FILE = 'file:///home/user/howfar/howfar-sky-v1.html';
+const FILE = 'file://' + require('path').join(__dirname, '../prototypes/howfar-sky-v1.html');
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -11,7 +11,7 @@ function ok(name, cond, extra){
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 (async () => {
-  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] });
   const page = await browser.newPage();
   await page.setViewport({ width: 480, height: 900 });
   const errors = [];

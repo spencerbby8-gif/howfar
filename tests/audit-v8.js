@@ -1,8 +1,8 @@
 const puppeteer = require('puppeteer');
-const FILE = 'file:///home/user/howfar/howfar-app-v8.html';
+const FILE = 'file://' + require('path').join(__dirname, '../prototypes/howfar-app-v8.html');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
-  const b = await puppeteer.launch({ args: ['--no-sandbox'] });
+  const b = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] });
   const page = await b.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));

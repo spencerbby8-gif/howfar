@@ -1,6 +1,6 @@
 /* how far v8 — the check-in app · full browser test suite */
 const puppeteer = require('puppeteer');
-const FILE = 'file:///home/user/howfar/howfar-app-v8.html';
+const FILE = 'file://' + require('path').join(__dirname, '../prototypes/howfar-app-v8.html');
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -19,7 +19,7 @@ async function waitFor(page, fn, timeout, label){
 }
 
 (async () => {
-  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] });
   const page = await browser.newPage();
   await page.setViewport({ width: 480, height: 900 });
   const errors = [];

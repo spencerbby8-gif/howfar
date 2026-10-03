@@ -21,7 +21,7 @@ const path = require('path');
 
   const browser = await puppeteer.launch({
     headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
   });
 
   const page = await browser.newPage();
@@ -33,7 +33,7 @@ const path = require('path');
     if (msg.type() === 'error') pageErrors.push(msg.text());
   });
 
-  const filePath = 'file://' + path.resolve('/home/user/howfar/howfar-app-v9.html');
+  const filePath = 'file://' + path.resolve(__dirname, '../prototypes/howfar-app-v9.html');
   await page.goto(filePath, { waitUntil: 'load' });
 
   // 1. Initial Load & Errors Check

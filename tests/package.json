@@ -1,0 +1,16 @@
+{
+  "name": "howfar-tests",
+  "version": "1.0.0",
+  "scripts": {
+    "test:v9": "node test-v9.js",
+    "test:sky": "node test-sky.js",
+    "test:v8": "node test-v8.js",
+    "test:v7": "node test-v7.js",
+    "test:all": "node test-v9.js && node test-sky.js && node test-v8.js && node test-v7.js"
+  },
+  "description": "HowFar automated prototype test suites (Puppeteer)",
+  "dependencies": {
+    "puppeteer": "^24.43.1"
+  },
+  "private": true
+}
