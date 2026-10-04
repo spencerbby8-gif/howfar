@@ -105,12 +105,14 @@ The UI strictly adheres to the authentic ReplyMate kit:
 │   ├── howfar-spec-audit.md           # Product audit
 │   └── howfar-ui-plan.md              # UI interaction map
 ├── prototypes/
+│   ├── howfar-app-v10.html            # Latest v10 deck prototype (passing test suite)
 │   ├── howfar-app-v9.html             # Current v3 flagship prototype (45/45 Green)
 │   ├── howfar-sky-v1.html             # Sky animation prototype (64/64 Green)
 │   ├── howfar-app-v8.html             # v8 check-in archive
 │   ├── howfar-app-v7.html             # v7 strata archive
 │   └── howfar-app-v5.html             # Approved ReplyMate chassis baseline
 ├── tests/
+│   ├── test-v10.js                    # Automated test suite for v10
 │   ├── test-v9.js                     # Full automated Puppeteer suite for v9 (45 checks)
 │   ├── test-sky.js                    # Automated test suite for Sky animations (64 checks)
 │   ├── test-v8.js                     # Test suite for v8

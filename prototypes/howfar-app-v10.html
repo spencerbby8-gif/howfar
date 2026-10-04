@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>How Far · v10 prototype</title>
+<style>
+:root{--bg:#0D1117;--card:#161B22;--field:#11161D;--stroke:#2A3139;--text:#FFFFFF;--dim:#AAB2BD;--accent:#0A84FF;--green:#3FB950;--red:#FF6B6B;--flare:#FF4A1C;--volt:#C6FF3D;--bubble-in:#1C2330;--bubble-out:#1E3250}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:Roboto,"Helvetica Neue",Arial,sans-serif}body{overflow:hidden}button,input{font:inherit}button{color:inherit}
+#app{width:100%;max-width:480px;height:100dvh;margin:auto;background:var(--bg);position:relative;overflow:hidden}
+#status{height:30px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#dce2e8}
+.stage{position:absolute;inset:30px 0 0;overflow:hidden}.screen{position:absolute;inset:0;display:none;overflow-y:auto;scrollbar-width:none;padding:20px;background:var(--bg)}.screen::-webkit-scrollbar{display:none}.screen.active{display:block}
+.h1{font-size:22px;font-weight:700;line-height:1.2}.sub{font-size:13px;color:var(--dim)}.label{font-size:12px;color:var(--dim);padding:12px 0 4px}.divider{height:1px;background:var(--stroke)}
+.field{width:100%;background:var(--field);border:1px solid var(--stroke);border-radius:10px;color:var(--text);font-size:15px;padding:10px 12px;outline:none}.field::placeholder{color:var(--dim)}.field:focus{border-color:var(--accent)}
+.primary{width:100%;min-height:52px;border:0;border-radius:14px;background:var(--accent);color:#fff;font-size:16px;font-weight:700}.ghost{width:100%;min-height:52px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:transparent;color:#fff;font-size:16px}
+.row{display:flex;align-items:center;padding:14px 0}.row .copy{flex:1;min-width:0}.row .title{font-size:16px}.row .sub{margin-top:2px}.chev{font-size:22px;color:var(--dim);margin-left:8px}.headerline{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.headerline .title{font-size:24px;font-weight:700}.statusline{font-size:12px;color:var(--accent);margin-top:10px}
+/* HOME POST DECK ----------------------------------------------------- */
+#home{display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:none}
+#home .statusline,#home .label,#home #stories{flex:none}
+#home #stories{border-bottom:1px solid var(--stroke);padding-bottom:12px}
+#home .feed{position:relative;flex:1;min-height:0;overflow:hidden;padding:0 0 44px}
+#home .post{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;padding:16px 0 8px;border:0;background:var(--bg);transition:transform .44s cubic-bezier(.2,.8,.2,1),opacity .32s ease;will-change:transform,opacity;touch-action:pan-y;overscroll-behavior:none}
+#home .post.is-active{transform:translate3d(0,0,0);opacity:1;z-index:3}
+#home .post.is-next{transform:translate3d(0,calc(100% - 74px),0) scale(.985);opacity:.98;z-index:2}
+#home .post.is-hidden{transform:translate3d(0,106%,0) scale(.98);opacity:0;z-index:1;pointer-events:none}
+#home .post.leaving-left{transform:translate3d(-115%,0,0) rotate(-1.5deg);opacity:.18;z-index:4}
+#home .post.swipe-ready .post-media{border-color:rgba(255,255,255,.20)}
+.post-deck-hint{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:10;pointer-events:none;color:var(--dim);font-size:11px;white-space:nowrap}
+.post-deck-hint b{color:#fff;font-weight:600}
+.post-deck-progress{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);display:flex;gap:4px;z-index:10;pointer-events:none}
+.post-deck-progress i{width:4px;height:4px;border-radius:50%;background:var(--stroke)}
+.post-deck-progress i.active{width:14px;border-radius:4px;background:var(--accent)}
+#rail{position:absolute;left:0;top:30px;bottom:0;width:76px;touch-action:none;;background:var(--bg);border-right:1px solid var(--stroke);z-index:30;padding:12px 8px;display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.2,.8,.2,1);will-change:transform}#rail.collapsed{transform:translateX(-100%);pointer-events:none}
+.rail-brand{font-size:18px;font-weight:700;padding:12px 4px 24px}.rail-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0;color:var(--dim);border-radius:12px}.rail-item.active{color:#fff;background:rgba(10,132,255,.10)}.rail-item span{font-size:10px}.rail-bottom{margin-top:auto}
+#main{margin-left:76px;height:100%;position:relative;overflow:hidden;transition:margin-left .28s cubic-bezier(.2,.8,.2,1);touch-action:pan-y}#main.rail-collapsed{margin-left:0}
+#rail-toggle{position:absolute;left:58px;bottom:18px;z-index:40;width:28px;height:28px;border-radius:50%;border:1px solid var(--stroke);background:var(--card);color:var(--dim)}#edge-open-zone{position:absolute;left:0;top:30px;bottom:0;width:24px;z-index:90;display:none;touch-action:none}#edge-open-zone.active{display:block}#comment-edge-zone{position:absolute;right:0;top:30px;bottom:0;width:24px;z-index:89;touch-action:none}
+#stories{display:flex;gap:14px;overflow-x:auto;padding:8px 0 14px;scrollbar-width:none}#stories::-webkit-scrollbar{display:none}.story{min-width:58px;text-align:center}.story .avatar{width:48px;height:48px;margin:0 auto 6px;border:1px solid var(--stroke);background:var(--card);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;position:relative}.story .orbit{position:absolute;inset:-5px;border:2px solid var(--accent);border-left-color:transparent;border-bottom-color:transparent;border-radius:50%;transform:rotate(30deg)}.story .name{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.story:nth-child(2) .avatar{border-radius:14px}.story:nth-child(3) .avatar{border-radius:20px 8px}.story:nth-child(4) .avatar{border-radius:18px 18px 8px 8px}.story:nth-child(5) .avatar{border-radius:50% 18%}
+.feed{display:flex;flex-direction:column;padding-bottom:90px}.post{padding:18px 0;border-bottom:1px solid var(--stroke);position:relative;touch-action:pan-y;transition:transform .18s cubic-bezier(.2,.8,.2,1)}.post-head{position:relative;display:flex;align-items:flex-start;justify-content:center;min-height:76px;padding-top:2px}.post-head .more{position:absolute;top:0;right:0}.author{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}.mini{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;border:1px solid var(--stroke)}.author>div:last-child{display:flex;flex-direction:column;align-items:center}.name{font-size:15px;font-weight:700}.receipt{font-size:11px;color:var(--dim);margin-top:2px}.receipt b{color:var(--accent)}.post-body{padding:18px 0 10px;font-size:17px;line-height:1.48}.post-media{margin-top:10px;background:var(--field);border-radius:10px;min-height:180px;padding:24px;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1.45}.post-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;font-size:12px;color:var(--dim)}.actions{display:flex;gap:8px}.action{border:1px solid var(--stroke);background:var(--field);border-radius:14px;padding:8px 10px;font-size:12px;color:var(--dim)}.flare{color:var(--flare);border-color:rgba(255,74,28,.4)}.reacts{position:absolute;right:0;bottom:78px;display:flex;flex-direction:column;gap:8px}.react{width:40px;height:40px;border-radius:50%;background:var(--card);border:1px solid var(--stroke);display:flex;align-items:center;justify-content:center}
+#comments{position:absolute;inset:0;background:var(--bg);z-index:60;display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;pointer-events:none;transition:transform .28s cubic-bezier(.2,.8,.2,1),visibility 0s linear .28s}#comments.open{transform:translateX(0);visibility:visible;pointer-events:auto;transition:transform .28s cubic-bezier(.2,.8,.2,1),visibility 0s}#comments.gesture-preview{visibility:visible;pointer-events:none;transition:none}.comments-head{display:flex;align-items:center;padding:16px;border-bottom:1px solid var(--stroke)}.comments-head .back{font-size:28px;color:var(--accent);padding-right:12px;border:0;background:transparent}.comments-list{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}.bubble{max-width:80%;padding:10px 12px;border-radius:14px;font-size:15px;line-height:1.45}.in{align-self:flex-start;background:var(--bubble-in)}.out{align-self:flex-end;background:var(--bubble-out);margin-left:48px}.bubble .meta{font-size:11px;color:var(--accent);font-weight:700;margin-bottom:4px}.composer{padding:12px;background:var(--card);border-top:1px solid var(--stroke)}.composer-row{display:flex;gap:8px;align-items:flex-end}.composer .field{min-height:48px}.send{width:56px;min-height:48px}
+#storyViewer{position:absolute;inset:0;background:#000;z-index:80;display:none;align-items:center;justify-content:center;padding:16px}#storyViewer.open{display:flex}.story-frame{width:100%;height:86%;background:#14304F;border-radius:14px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:16px}.story-top{display:flex;justify-content:space-between;align-items:center}.story-caption{font-size:19px;line-height:1.45;max-width:88%}.story-close{border:0;background:rgba(0,0,0,.35);width:36px;height:36px;border-radius:50%}.fuse{position:absolute;left:50%;bottom:72px;transform:translateX(-50%);width:56px;height:56px;border-radius:50%;border:2px solid rgba(255,255,255,.18)}.fuse:after{content:"";position:absolute;inset:-2px;border:2px solid var(--accent);border-left-color:transparent;border-bottom-color:transparent;border-radius:50%;animation:fuse 15s linear infinite}@keyframes fuse{to{transform:rotate(360deg)}}.story-reply{position:absolute;bottom:24px;left:16px;right:16px}
+#now{padding:0;background:#000}.now-card{height:100%;padding:18px;display:flex;flex-direction:column;justify-content:flex-end;position:relative;background:#111318}.now-top{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between}.now-caption{font-size:24px;line-height:1.28;margin:12px 0}
+
+/* REELS + GESTURE LAYER ------------------------------------------------ */
+#reels{padding:0;background:#000;overflow:hidden}
+#reelDeck{position:relative;height:100%;overflow:hidden}
+.reel{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;padding:18px 18px 22px;transition:transform .46s cubic-bezier(.2,.8,.2,1),opacity .28s;will-change:transform,opacity}
+.reel.is-active{transform:translate3d(0,0,0);opacity:1;z-index:3}.reel.is-next{transform:translate3d(0,calc(100% - 42px),0) scale(.985);opacity:1;z-index:2}.reel.is-hidden{transform:translate3d(0,108%,0) scale(.98);opacity:0;z-index:1;pointer-events:none}.reel.leaving-left{transform:translate3d(-115%,0,0) rotate(-1deg);opacity:.08;z-index:4}
+.reel-head{display:flex;align-items:center;justify-content:space-between;min-height:44px;flex:none}.reel-author{display:flex;align-items:center;gap:10px}.reel-author .mini{width:36px;height:36px}.reel-head .sub{font-size:11px}
+.reel-video{position:relative;flex:1;min-height:0;margin:14px 0;background:#050505;border-radius:12px;overflow:hidden;border:1px solid var(--stroke);touch-action:none}
+.reel-video .motion{position:absolute;inset:-18%;background:linear-gradient(135deg,#0d1219 0%,#25131d 36%,#0b1d27 68%,#030303 100%);animation:reelMotion 6.8s ease-in-out infinite alternate}
+.reel:nth-child(2) .motion{background:linear-gradient(145deg,#030303 0%,#12231b 42%,#1b1710 72%,#030303 100%)}
+.reel:nth-child(3) .motion{background:linear-gradient(135deg,#070707 0%,#2a1c08 38%,#101a30 72%,#030303 100%)}
+@keyframes reelMotion{from{transform:scale(1.02) translate3d(-1.5%,1%,0)}to{transform:scale(1.09) translate3d(2%,-2%,0)}}
+.reel-controls{position:absolute;left:16px;right:16px;bottom:18px;transform:translateY(8px);display:flex;align-items:center;gap:22px;padding:0 2px;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease}.reel-video.controls-visible .reel-controls{opacity:1;transform:translateY(0);pointer-events:auto}
+.video-btn{width:46px;height:46px;flex:0 0 46px;border:0;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center;color:#fff;padding:0;text-shadow:0 1px 5px rgba(0,0,0,.75)}.video-btn:active{background:rgba(255,255,255,.14)}.video-btn svg{width:21px;height:21px;fill:currentColor;stroke:none;stroke-linecap:round;stroke-linejoin:round}
+.video-track{position:relative;flex:1;min-width:130px;height:46px;display:flex;align-items:center}.video-track-line{width:100%;height:3px;border-radius:999px;background:rgba(255,255,255,.46);position:relative;overflow:visible;box-shadow:0 1px 4px rgba(0,0,0,.48)}.video-track-progress{position:absolute;left:0;top:0;height:100%;width:0;background:#fff;border-radius:999px}.video-countdown{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,10,10,.54);border:1px solid rgba(255,255,255,.20);box-shadow:0 2px 8px rgba(0,0,0,.38)}
+.video-countdown svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.video-countdown circle{fill:none;stroke:rgba(255,255,255,.28);stroke-width:2}.video-countdown .progress{stroke:#fff;stroke-linecap:round;stroke-dasharray:75.4;stroke-dashoffset:75.4}.video-countdown b{font-size:10px;font-weight:700;color:#fff;position:relative;z-index:2}
+.reel-foot{display:flex;justify-content:space-between;min-height:24px;font-size:11px;color:var(--dim)}
+#gesture-trace{position:fixed;z-index:110;pointer-events:none;overflow:visible}.gesture-trace-path{fill:none;stroke:rgba(255,255,255,.94);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 8px rgba(255,255,255,.16))}
+#share-menu{position:absolute;inset:0;background:rgba(0,0,0,.46);backdrop-filter:blur(10px);z-index:105;display:none;align-items:flex-end;padding:16px}#share-menu.open{display:flex}.share-sheet{width:100%;background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:16px}.share-sheet h2{margin:0;font-size:18px}.share-sheet p{margin:4px 0 12px}.share-actions{display:grid;gap:8px}.share-actions .row{background:var(--field);border-radius:10px;padding:12px}.share-close{margin-top:8px}
+.gesture-toast{position:absolute;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);background:rgba(0,0,0,.78);border:1px solid var(--stroke);border-radius:10px;padding:9px 12px;font-size:12px;opacity:0;pointer-events:none;z-index:120;transition:opacity .16s,transform .16s}.gesture-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#camera .cam-preview{height:52%;border-radius:12px;background:var(--field);border:1px solid var(--stroke);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:14px}#camera img{width:100%;height:100%;object-fit:cover;display:none}.camera-copy{text-align:center;padding:20px}
+.profile-head{display:flex;align-items:center;gap:12px}.profile-avatar{width:64px;height:64px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}.stats{display:flex;gap:8px;margin:18px 0}.stat{flex:1;background:var(--card);border-radius:12px;padding:12px}.stat b{font-size:18px;display:block}.stat span{font-size:11px;color:var(--dim)}.map{height:190px;background:var(--field);border:1px solid var(--stroke);border-radius:12px;position:relative;overflow:hidden}.map i{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--accent)}.map i.home{background:var(--flare);width:8px;height:8px}.strata .row{border-bottom:1px solid var(--stroke)}.dot{width:8px;height:8px;border-radius:50%;background:var(--volt);margin-right:10px}.alert{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--stroke)}.icon{width:36px;height:36px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center}.hidden{display:none}
+@media(max-width:380px){#rail{width:68px}#main{margin-left:68px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="status"><span>12:04</span><span>▮▮▮ 84%</span></div>
+  <div id="edge-open-zone" aria-hidden="true"></div>
+  <div id="comment-edge-zone" aria-hidden="true"></div>
+  <nav id="rail">
+    <div class="rail-brand">hf</div>
+    <div class="rail-item active" data-tab="home">⌂<span>Home</span></div>
+    <div class="rail-item" data-tab="now">▶<span>Now</span></div>
+    <div class="rail-item" data-tab="reels">◍<span>Reels</span></div>
+    <div class="rail-item" data-tab="camera">＋<span>Camera</span></div>
+    <div class="rail-item" data-tab="alerts">◉<span>Alerts</span></div>
+    <div class="rail-item" data-tab="profile">○<span>Profile</span></div>
+    <div class="rail-bottom"><button id="rail-toggle">›</button></div>
+  </nav>
+  <div id="main">
+    <section class="screen active" id="home">
+      <div class="headerline"><div><div class="h1">how far</div><div class="sub">what’s happening around you</div></div></div>
+      <div id="home-status" class="statusline">Near you · live</div>
+      <div class="label">Stories</div>
+      <div id="stories">
+        <div class="story" data-user="amara"><div class="avatar" style="background:#B3300F"><span>A</span><i class="orbit"></i></div><div class="name">amara</div></div>
+        <div class="story" data-user="tunde"><div class="avatar" style="background:#05478F"><span>T</span><i class="orbit"></i></div><div class="name">tunde</div></div>
+        <div class="story" data-user="kelechi"><div class="avatar" style="background:#145420"><span>K</span><i class="orbit"></i></div><div class="name">kelechi</div></div>
+        <div class="story" data-user="ifeoma"><div class="avatar" style="background:#78500C"><span>I</span><i class="orbit"></i></div><div class="name">ifeoma</div></div>
+        <div class="story" data-user="chidi"><div class="avatar" style="background:#30363D"><span>C</span><i class="orbit"></i></div><div class="name">chidi</div></div>
+      </div>
+      <div class="label">Moments</div>
+      <div class="feed">
+        <article class="post" data-id="1">
+          <div class="post-head"><div class="author"><div class="mini" style="background:#B3300F">A</div><div><div class="name">amara</div><div class="receipt">warri · <b>4 min ago</b> · 2 km</div></div></div><button class="action">•••</button></div>
+          <div class="post-body">The evening breeze over the bridge right now. No filters, just the water catching the last orange light.</div>
+          <div class="post-media">water catching the last orange light</div>
+          <div class="reacts"><button class="react">T</button><button class="react">K</button></div>
+          <div class="post-foot"><span>Sunset walk in Warri</span><div class="actions"><button class="action flare">🔥 flare</button><button class="action comments-btn">comments ›</button></div></div>
+        </article>
+        <article class="post" data-id="2">
+          <div class="post-head"><div class="author"><div class="mini" style="background:#05478F">T</div><div><div class="name">tunde</div><div class="receipt">lagos · <b>45 min ago</b> · 38 km</div></div></div><button class="action">•••</button></div>
+          <div class="post-body">Lekki expressway traffic turned into a live music circle. Guy in the bus brought out a saxophone 😂</div>
+          <div class="post-media">15s street sound · lagos</div>
+          <div class="post-foot"><span>third mainland</span><div class="actions"><button class="action flare">🔥 flare</button><button class="action comments-btn">comments ›</button></div></div>
+        </article>
+        <article class="post" data-id="3">
+          <div class="post-head"><div class="author"><div class="mini" style="background:#145420">K</div><div><div class="name">kelechi</div><div class="receipt">port harcourt · <b>1 h ago</b> · 9 km</div></div></div><button class="action more">•••</button></div>
+          <div class="post-body">The whole street smelled like rain before the first drop even landed. Everybody just stopped talking.</div>
+          <div class="post-media">rain waiting over Port Harcourt</div>
+          <div class="post-foot"><span>old garrison · tonight</span><div class="actions"><button class="action flare">🔥 flare</button><button class="action comments-btn">comments ›</button></div></div>
+        </article>
+        <article class="post" data-id="4">
+          <div class="post-head"><div class="author"><div class="mini" style="background:#78500C">I</div><div><div class="name">ifeoma</div><div class="receipt">enugu · <b>2 h ago</b> · 486 km</div></div></div><button class="action more">•••</button></div>
+          <div class="post-body">Found this quiet road on the way home. No destination planned. Somehow that made it better.</div>
+          <div class="post-media">quiet road · enugu</div>
+          <div class="post-foot"><span>just passing through</span><div class="actions"><button class="action flare">🔥 flare</button><button class="action comments-btn">comments ›</button></div></div>
+        </article>
+        <div class="post-deck-progress" id="deckProgress"></div>
+        <div class="post-deck-hint"><b>Swipe left</b> to release</div>
+      </div>
+    </section>
+
+    <section class="screen" id="now">
+      <div class="now-card">
+        <div class="now-top"><span class="sub">Near · ~50 km</span><span class="sub">1.4 km</span></div>
+        <div><div class="author"><div class="mini" style="background:var(--flare)">N</div><div><div class="name">ngozi</div><div class="sub">port harcourt · 2 min ago</div></div></div><div class="now-caption">Live street cypher outside the stadium. Who’s in Town right now?</div><div class="actions"><button class="action comments-btn">💬 8 reactions</button><button class="action flare">🔥 flare</button></div></div>
+      </div>
+    </section>
+
+    <section class="screen" id="reels">
+      <div id="reelDeck">
+        <article class="reel is-active" data-reel-id="r1" data-duration="15">
+          <div class="reel-head"><div class="reel-author"><div class="mini" style="background:#B3300F">A</div><div><div class="name">amara</div><div class="sub">warri · 15s moment</div></div></div><button class="action">•••</button></div>
+          <div class="reel-video"><div class="motion"></div><div class="reel-controls" aria-label="Video controls"><button class="video-btn pause-btn" aria-label="Pause"><svg viewBox="0 0 24 24"><rect x="7" y="5" width="3" height="14" rx="1"/><rect x="14" y="5" width="3" height="14" rx="1"/></svg></button><div class="video-track"><div class="video-track-line"><div class="video-track-progress"></div></div><div class="video-countdown"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12"/><circle class="progress" cx="16" cy="16" r="12"/></svg><b class="count-label">15</b></div></div><button class="video-btn mute-btn" aria-label="Mute"><svg class="mute-icon" viewBox="0 0 24 24"><path d="M5 10v4h4l5 4V6l-5 4H5Z"/><path d="m19 9-4 6"/></svg></button></div></div>
+          <div class="reel-foot"><span>swipe left to release</span><span>swipe up to restore</span></div>
+        </article>
+        <article class="reel is-next" data-reel-id="r2" data-duration="15">
+          <div class="reel-head"><div class="reel-author"><div class="mini" style="background:#05478F">T</div><div><div class="name">tunde</div><div class="sub">lagos · 15s moment</div></div></div><button class="action">•••</button></div>
+          <div class="reel-video"><div class="motion"></div><div class="reel-controls" aria-label="Video controls"><button class="video-btn pause-btn" aria-label="Pause"><svg viewBox="0 0 24 24"><rect x="7" y="5" width="3" height="14" rx="1"/><rect x="14" y="5" width="3" height="14" rx="1"/></svg></button><div class="video-track"><div class="video-track-line"><div class="video-track-progress"></div></div><div class="video-countdown"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12"/><circle class="progress" cx="16" cy="16" r="12"/></svg><b class="count-label">15</b></div></div><button class="video-btn mute-btn" aria-label="Mute"><svg class="mute-icon" viewBox="0 0 24 24"><path d="M5 10v4h4l5 4V6l-5 4H5Z"/><path d="m19 9-4 6"/></svg></button></div></div>
+          <div class="reel-foot"><span>swipe left to release</span><span>swipe up to restore</span></div>
+        </article>
+        <article class="reel is-hidden" data-reel-id="r3" data-duration="15">
+          <div class="reel-head"><div class="reel-author"><div class="mini" style="background:#145420">K</div><div><div class="name">kelechi</div><div class="sub">port harcourt · 15s moment</div></div></div><button class="action">•••</button></div>
+          <div class="reel-video"><div class="motion"></div><div class="reel-controls" aria-label="Video controls"><button class="video-btn pause-btn" aria-label="Pause"><svg viewBox="0 0 24 24"><rect x="7" y="5" width="3" height="14" rx="1"/><rect x="14" y="5" width="3" height="14" rx="1"/></svg></button><div class="video-track"><div class="video-track-line"><div class="video-track-progress"></div></div><div class="video-countdown"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12"/><circle class="progress" cx="16" cy="16" r="12"/></svg><b class="count-label">15</b></div></div><button class="video-btn mute-btn" aria-label="Mute"><svg class="mute-icon" viewBox="0 0 24 24"><path d="M5 10v4h4l5 4V6l-5 4H5Z"/><path d="m19 9-4 6"/></svg></button></div></div>
+          <div class="reel-foot"><span>swipe left to release</span><span>swipe up to restore</span></div>
+        </article>
+        <div id="reelDots" class="post-deck-progress"></div>
+      </div>
+    </section>
+
+    <section class="screen" id="camera">
+      <div class="headerline"><div><div class="h1">Camera</div><div class="sub">Release a still or a 15s moment</div></div></div>
+      <div class="cam-preview"><img id="preview"><div class="camera-copy" id="cam-copy"><div style="font-size:42px">＋</div><div class="sub">Select a real photo from your device</div><button class="ghost" id="pick" style="margin-top:14px">Select Photo Still</button></div></div>
+      <input id="file" type="file" accept="image/*" class="hidden">
+      <div class="label">Receipt note</div><input id="caption" class="field" placeholder="Add receipt note or caption…">
+      <button class="primary" id="publish" style="margin-top:14px">Release post</button>
+    </section>
+
+    <section class="screen" id="alerts">
+      <div class="h1">Alerts</div><div class="sub" style="margin-top:2px">Things that reached you</div>
+      <div style="margin-top:14px">
+        <div class="alert"><div class="icon">🔥</div><div style="flex:1"><div class="name">amara flared your post</div><div class="sub">warri · 4 min ago</div></div><div class="chev">›</div></div>
+        <div class="alert"><div class="icon">💬</div><div style="flex:1"><div class="name">tunde dropped a reaction</div><div class="sub">lagos · 45 min ago</div></div><div class="chev">›</div></div>
+        <div class="alert"><div class="icon">◉</div><div style="flex:1"><div class="name">your post reached accra</div><div class="sub">2 countries touched · 890 km</div></div><div class="chev">›</div></div>
+      </div>
+    </section>
+
+    <section class="screen" id="profile">
+      <div class="profile-head"><div class="profile-avatar">Y</div><div><div class="h1" style="font-size:20px">You</div><div class="sub">port harcourt · creator</div></div></div>
+      <div class="stats"><div class="stat"><b>18,420</b><span>KM Traveled</span></div><div class="stat"><b>14</b><span>Cities Reached</span></div><div class="stat"><b id="flares">128</b><span>Flares Kept</span></div></div>
+      <div class="label">Reach Map</div><div class="map"><i class="home" style="left:42%;top:68%"></i><i style="left:34%;top:60%"></i><i style="left:24%;top:56%"></i><i style="left:70%;top:26%"></i></div>
+      <div class="label">The Ground</div>
+      <div class="strata"><div class="row"><i class="dot"></i><div class="copy"><div class="title">Today · Surface</div><div class="sub">3 posts</div></div><div class="chev">›</div></div><div class="row"><i class="dot" style="background:var(--accent)"></i><div class="copy"><div class="title">This Week · Layer 1</div><div class="sub">9 posts</div></div><div class="chev">›</div></div><div class="row"><i class="dot" style="background:#8A63D2"></i><div class="copy"><div class="title">This Month · Deep Ground</div><div class="sub">24 posts</div></div><div class="chev">›</div></div></div>
+    </section>
+  </div>
+
+  <div id="comments">
+    <div class="comments-head"><button class="back" id="closeComments">‹</button><div><div class="name">Comments</div><div class="sub">2 replies · swipe right edge again to return</div></div></div>
+    <div class="comments-list" id="commentList"><div class="bubble in"><div class="meta">tunde · 4 min ago</div>Bro this view is crazy 😂</div><div class="bubble in"><div class="meta">kelechi · 2 min ago</div>Need to come to Warri this weekend for real 🔥</div></div>
+    <div class="composer"><div class="statusline" style="margin:0 0 4px">Ready · reply</div><div class="composer-row"><button class="action" style="height:48px">+ Video</button><input id="commentInput" class="field" placeholder="Type your reply…"><button id="sendComment" class="primary send">➤</button></div></div>
+  </div>
+
+  <svg id="gesture-trace"><path class="gesture-trace-path" id="gesturePath" d=""/></svg>
+  <div id="share-menu"><div class="share-sheet"><h2>Share moment</h2><p class="sub">Opened by the How Far share gesture.</p><div class="share-actions"><div class="row" id="shareCopy"><div class="copy"><div class="title">Copy link</div><div class="sub">Keep the moment's path</div></div><div class="chev">›</div></div><div class="row" id="shareSend"><div class="copy"><div class="title">Share to another app</div><div class="sub">Use the phone share sheet</div></div><div class="chev">›</div></div><div class="row" id="shareNearby"><div class="copy"><div class="title">Send nearby</div><div class="sub">Share to someone close</div></div><div class="chev">›</div></div></div><button class="ghost share-close" id="shareClose">Close</button></div></div>
+  <div class="gesture-toast" id="gestureToast"></div>
+  <div id="storyViewer"><div class="story-frame"><div class="story-top"><div><div class="name" id="storyUser">amara</div><div class="sub" id="storyType">Photo Still (48h)</div></div><button class="story-close" id="closeStory">✕</button></div><div class="story-caption" id="storyText">The evening water in Warri. Kept moment.</div><div class="fuse" title="15s Moment fuse"></div><div class="story-reply"><button class="primary">🎙 Hold to reply with light</button></div></div></div>
+</div>
+<script>
+(() => {
+  const tabs=[...document.querySelectorAll('.rail-item')];
+  const screens=[...document.querySelectorAll('.screen')];
+  const main=document.getElementById('main');
+  const rail=document.getElementById('rail');
+  const railToggle=document.getElementById('rail-toggle');
+  const edgeOpen=document.getElementById('edge-open-zone');
+  const commentEdge=document.getElementById('comment-edge-zone');
+  const comments=document.getElementById('comments');
+  const storyViewer=document.getElementById('storyViewer');
+  const feed=document.querySelector('#home .feed');
+
+  function setRailCollapsed(collapsed){
+    rail.classList.toggle('collapsed',collapsed);
+    main.classList.toggle('rail-collapsed',collapsed);
+    edgeOpen.classList.toggle('active',collapsed);
+  }
+  function currentTab(){const i=tabs.findIndex(x=>x.classList.contains('active'));return i<0?0:i}
+  function switchTab(id){
+    tabs.forEach(x=>x.classList.toggle('active',x.dataset.tab===id));
+    screens.forEach(x=>x.classList.toggle('active',x.id===id));
+    if(id==='now') setRailCollapsed(true);
+  }
+  tabs.forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+  railToggle.addEventListener('click',e=>{e.stopPropagation();setRailCollapsed(!rail.classList.contains('collapsed'))});
+
+  // Rail: visible rail -> swipe left to hide. No pointer capture, so taps still click normally.
+  let railGesture=null;
+  rail.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse' && e.button!==0)return;
+    railGesture={x:e.clientX,y:e.clientY};
+  });
+  rail.addEventListener('pointerup',e=>{
+    if(!railGesture)return;
+    const dx=e.clientX-railGesture.x,dy=e.clientY-railGesture.y;railGesture=null;
+    if(dx<-70 && Math.abs(dx)>Math.abs(dy)*1.2)setRailCollapsed(true);
+  });
+  rail.addEventListener('pointercancel',()=>railGesture=null);
+
+  // Hidden left edge: swipe right to reveal rail.
+  let edgeGesture=null;
+  edgeOpen.addEventListener('pointerdown',e=>{edgeGesture={x:e.clientX,y:e.clientY};e.preventDefault()});
+  edgeOpen.addEventListener('pointerup',e=>{
+    if(!edgeGesture)return;
+    const dx=e.clientX-edgeGesture.x,dy=e.clientY-edgeGesture.y;edgeGesture=null;
+    if(dx>55 && Math.abs(dx)>Math.abs(dy)*1.2)setRailCollapsed(false);
+  });
+  edgeOpen.addEventListener('pointercancel',()=>edgeGesture=null);
+
+  // Story tap opening.
+  const storyData={
+    amara:['The evening water in Warri. Kept moment.','Listening to the waves hitting the pier.'],
+    tunde:['Traffic jazz in Lekki!'],
+    kelechi:['Port Harcourt street market colors.','New paintings on the wall.'],
+    ifeoma:['Enugu hills at dawn.'],chidi:['Fast drive along the coast.']
+  };
+  document.querySelectorAll('.story').forEach(story=>story.addEventListener('click',()=>{
+    document.getElementById('storyUser').textContent=story.dataset.user;
+    document.getElementById('storyText').textContent=storyData[story.dataset.user]?.[0]||'A kept moment.';
+    storyViewer.classList.add('open');
+  }));
+  document.getElementById('closeStory').addEventListener('click',()=>storyViewer.classList.remove('open'));
+
+  // Comments panel.
+  function openComments(){comments.classList.add('open');comments.classList.remove('gesture-preview');comments.style.transform=''}
+  function closeComments(){comments.classList.remove('open','gesture-preview');comments.style.transform=''}
+  document.getElementById('closeComments').addEventListener('click',closeComments);
+
+  // RIGHT EDGE -> CENTER opens comments. This is separate from vertical page scrolling.
+  let commentGesture=null;
+  commentEdge.addEventListener('pointerdown',e=>{
+    if(comments.classList.contains('open')||storyViewer.classList.contains('open'))return;
+    if(!document.getElementById('home').classList.contains('active')&&!document.getElementById('now').classList.contains('active'))return;
+    commentGesture={x:e.clientX,y:e.clientY};
+    comments.classList.add('gesture-preview');
+    comments.style.transform='translateX(100%)';
+    e.preventDefault();
+  });
+  commentEdge.addEventListener('pointermove',e=>{
+    if(!commentGesture)return;
+    const dx=Math.min(0,e.clientX-commentGesture.x),dy=e.clientY-commentGesture.y;
+    if(Math.abs(dx)<=Math.abs(dy)*1.15)return;
+    e.preventDefault();
+    comments.style.transform='translateX(calc(100% + '+dx+'px))';
+  });
+  commentEdge.addEventListener('pointerup',e=>{
+    if(!commentGesture)return;
+    const g=commentGesture;commentGesture=null;
+    const dx=e.clientX-g.x,dy=e.clientY-g.y;
+    if(dx<-110&&Math.abs(dx)>Math.abs(dy)*1.2){openComments();return}
+    closeComments();
+  });
+  commentEdge.addEventListener('pointercancel',()=>{commentGesture=null;closeComments()});
+
+  // When comments are open, swipe right from anywhere across the panel to close.
+  let closeGesture=null;
+  comments.addEventListener('pointerdown',e=>{
+    if(!comments.classList.contains('open'))return;
+    const tag=(e.target.tagName||'').toLowerCase();
+    if(['input','button','textarea','select'].includes(tag))return;
+    closeGesture={x:e.clientX,y:e.clientY};
+  });
+  comments.addEventListener('pointerup',e=>{
+    if(!closeGesture)return;
+    const dx=e.clientX-closeGesture.x,dy=e.clientY-closeGesture.y;closeGesture=null;
+    if(dx>100&&Math.abs(dx)>Math.abs(dy)*1.2)closeComments();
+  });
+  comments.addEventListener('pointercancel',()=>closeGesture=null);
+
+  // Global horizontal navigation. Never capture the pointer: vertical scrolling and child taps must work.
+  let navGesture=null;
+  main.addEventListener('pointerdown',e=>{
+    if(comments.classList.contains('open')||storyViewer.classList.contains('open'))return;
+    const el=e.target.closest?.('button,input,textarea,select,.post,.story');
+    if(el)return;
+    navGesture={x:e.clientX,y:e.clientY};
+  });
+  main.addEventListener('pointerup',e=>{
+    if(!navGesture)return;
+    const g=navGesture;navGesture=null;
+    const dx=e.clientX-g.x,dy=e.clientY-g.y;
+    if(Math.abs(dx)<80||Math.abs(dx)<Math.abs(dy)*1.35)return;
+    const order=tabs.map(x=>x.dataset.tab),idx=currentTab();
+    if(dx<0&&idx<order.length-1)switchTab(order[idx+1]);
+    if(dx>0&&idx>0)switchTab(order[idx-1]);
+  });
+  main.addEventListener('pointercancel',()=>navGesture=null);
+
+  // HOME + REELS DECKS ---------------------------------------------------
+  let homeIndex=0,homeHistory=[],homeAnimating=false;
+  let reelIndex=0,reelHistory=[],reelAnimating=false;
+  let activeReelTimer=null,reelProgressMs=0,reelPaused=false;
+  function postList(){return [...feed.querySelectorAll('.post')]}
+  function reelList(){return [...document.querySelectorAll('#reelDeck .reel')]}
+  function paintDeck(items,index,dots){if(!items.length)return;items.forEach((el,i)=>{el.classList.remove('is-active','is-next','is-hidden','leaving-left');if(i===index)el.classList.add('is-active');else if(i===index+1)el.classList.add('is-next');else el.classList.add('is-hidden')});if(dots){dots.innerHTML='';items.forEach((_,i)=>{const d=document.createElement('i');if(i===index)d.classList.add('active');dots.appendChild(d)})}}
+  function advanceHome(){if(homeAnimating)return;const items=postList();if(homeIndex>=items.length-1)return;const cur=items[homeIndex],next=items[homeIndex+1];homeHistory.push(homeIndex);homeAnimating=true;next.classList.remove('is-hidden');next.classList.add('is-next');cur.classList.add('leaving-left');requestAnimationFrame(()=>requestAnimationFrame(()=>next.classList.add('is-active')));setTimeout(()=>{homeIndex++;homeAnimating=false;paintDeck(items,homeIndex,deckProgress)},470)}
+  function rewindHome(){if(homeAnimating||!homeHistory.length)return false;const target=homeHistory.pop(),items=postList(),cur=items[homeIndex],prev=items[target];homeAnimating=true;cur.classList.add('leaving-left');prev.classList.remove('is-hidden');prev.classList.add('is-active');homeIndex=target;paintDeck(items,homeIndex,deckProgress);setTimeout(()=>homeAnimating=false,240);showToast('Moment restored ↑');return true}
+  function advanceReel(){if(reelAnimating)return;const items=reelList();if(reelIndex>=items.length-1)return;const cur=items[reelIndex],next=items[reelIndex+1];reelHistory.push(reelIndex);reelAnimating=true;next.classList.remove('is-hidden');next.classList.add('is-next');cur.classList.add('leaving-left');requestAnimationFrame(()=>requestAnimationFrame(()=>next.classList.add('is-active')));setTimeout(()=>{reelIndex++;reelAnimating=false;paintDeck(items,reelIndex,document.getElementById('reelDots'));startReelTimer()},470)}
+  function rewindReel(){if(reelAnimating||!reelHistory.length)return false;const target=reelHistory.pop(),items=reelList(),cur=items[reelIndex],prev=items[target];reelAnimating=true;cur.classList.add('leaving-left');prev.classList.remove('is-hidden');prev.classList.add('is-active');reelIndex=target;paintDeck(items,reelIndex,document.getElementById('reelDots'));setTimeout(()=>{reelAnimating=false;startReelTimer()},240);showToast('Reel restored ↑');return true}
+  function bindDeckPost(post){if(post.dataset.deckBound==='1')return;post.dataset.deckBound='1';let g=null,moved=false,lastTap=0;post.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;if(e.target.closest?.('button,input,textarea,select'))return;g={x:e.clientX,y:e.clientY};moved=false});post.addEventListener('pointermove',e=>{if(window.__howfarFreehandActive||!g||homeAnimating||reelAnimating)return;const dx=e.clientX-g.x,dy=e.clientY-g.y;if(Math.abs(dx)<=Math.abs(dy)*1.12||Math.abs(dx)<8)return;moved=true;e.preventDefault();const sh=Math.max(-120,Math.min(10,dx));post.style.transform='translate3d('+sh+'px,0,0) rotate('+(sh/100)+'deg)'});post.addEventListener('pointerup',e=>{if(window.__howfarFreehandActive){g=null;post.style.transform='';return}if(!g)return;const st=g;g=null;const dx=e.clientX-st.x,dy=e.clientY-st.y;post.style.transform='';if(moved){if(dx<-82&&Math.abs(dx)>Math.abs(dy)*1.15){if(post.closest('#reelDeck'))advanceReel();else if(post===postList()[homeIndex])advanceHome()}else if(dy<-82&&Math.abs(dy)>Math.abs(dx)*1.2){if(post.closest('#reelDeck'))rewindReel();else if(post===postList()[homeIndex])rewindHome()}return}if(Math.abs(dx)>12||Math.abs(dy)>12)return;const now=Date.now();if(now-lastTap<280){doFlare(post);lastTap=0}else lastTap=now});post.addEventListener('pointercancel',()=>{g=null;post.style.transform='' });post.querySelectorAll('.comments-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openComments()}));post.querySelectorAll('.flare').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();doFlare(post)}))}
+  function doFlare(post){const f=document.getElementById('flares');if(f)f.textContent=Number(f.textContent)+1;showToast('Flare sent 🔥')}
+  postList().forEach(bindDeckPost);paintDeck(postList(),homeIndex,deckProgress)
+
+  // Reels: tap video to reveal the iPhone-Photos-inspired control row.
+  function stopReelTimer(){if(activeReelTimer){clearInterval(activeReelTimer);activeReelTimer=null}}
+  function startReelTimer(){stopReelTimer();if(!document.getElementById('reels').classList.contains('active'))return;const reel=reelList()[reelIndex];if(!reel)return;reelProgressMs=0;reelPaused=false;const ring=reel.querySelector('.progress'),label=reel.querySelector('.count-label'),pause=reel.querySelector('.pause-btn'),bar=reel.querySelector('.video-track-progress');if(ring)ring.style.strokeDashoffset='75.4';if(bar)bar.style.width='0%';if(label)label.textContent='15';if(pause)pause.innerHTML='<svg viewBox="0 0 24 24"><rect x="7" y="5" width="3" height="14" rx="1"/><rect x="14" y="5" width="3" height="14" rx="1"/></svg>';activeReelTimer=setInterval(()=>{if(reelPaused)return;reelProgressMs+=50;const dur=Number(reel.dataset.duration||15)*1000,p=Math.min(1,reelProgressMs/dur);if(ring)ring.style.strokeDashoffset=(75.4*(1-p)).toFixed(2);if(bar)bar.style.width=(p*100).toFixed(2)+'%';if(label)label.textContent=Math.max(0,Math.ceil((dur-reelProgressMs)/1000));if(p>=1){stopReelTimer();advanceReel()}},50)}
+  document.querySelectorAll('.reel').forEach(reel=>{bindDeckPost(reel);const video=reel.querySelector('.reel-video'),pause=reel.querySelector('.pause-btn'),mute=reel.querySelector('.mute-btn');video.addEventListener('click',e=>{if(e.target.closest('.video-btn'))return;video.classList.add('controls-visible');clearTimeout(video._hide);video._hide=setTimeout(()=>video.classList.remove('controls-visible'),2200)});pause.addEventListener('click',e=>{e.stopPropagation();reelPaused=!reelPaused;pause.innerHTML=reelPaused?'<svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></svg>':'<svg viewBox="0 0 24 24"><rect x="7" y="5" width="3" height="14" rx="1"/><rect x="14" y="5" width="3" height="14" rx="1"/></svg>';video.classList.add('controls-visible');showToast(reelPaused?'Paused':'Playing')});mute.addEventListener('click',e=>{e.stopPropagation();const icon=mute.querySelector('.mute-icon');const muted=mute.dataset.muted==='1';mute.dataset.muted=muted?'0':'1';if(icon)icon.innerHTML=muted?'<path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m18 6-12 12"/>':'<path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7"/>';video.classList.add('controls-visible');showToast(muted?'Sound on':'Muted')})});paintDeck(reelList(),reelIndex,document.getElementById('reelDots'))
+
+  // Camera.
+  document.getElementById('pick').addEventListener('click',()=>document.getElementById('file').click());
+  document.getElementById('file').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>{document.getElementById('preview').src=ev.target.result;document.getElementById('preview').style.display='block';document.getElementById('cam-copy').style.display='none'};r.readAsDataURL(f)});
+  document.getElementById('publish').addEventListener('click',()=>{const cap=document.getElementById('caption').value.trim()||'Released moment';feed.insertAdjacentHTML('beforeend',`<article class="post"><div class="post-head"><div class="author"><div class="mini" style="background:var(--accent)">Y</div><div><div class="name">You</div><div class="receipt">port harcourt · <b>just now</b> · 0 km</div></div></div><button class="action more">•••</button></div><div class="post-body"></div><div class="post-media">Released moment</div><div class="post-foot"><span>Just released</span><div class="actions"><button class="action flare">🔥 flare</button><button class="action comments-btn">comments ›</button></div></div></article>`);const fresh=feed.lastElementChild;fresh.querySelector('.post-body').textContent=cap;bindDeckPost(fresh);document.getElementById('caption').value='';paintDeck(postList(),homeIndex,deckProgress);switchTab('home')});
+
+  document.getElementById('sendComment').addEventListener('click',()=>{const i=document.getElementById('commentInput'),v=i.value.trim();if(!v)return;const d=document.createElement('div');d.className='bubble out';d.innerHTML='<div class="meta">You · just now</div>';d.appendChild(document.createTextNode(v));document.getElementById('commentList').appendChild(d);i.value=''})
+
+  // Freehand gesture language ---------------------------------------------
+  const gesturePath=document.getElementById('gesturePath'),toast=document.getElementById('gestureToast');let freehand=null;
+  function showToast(msg){toast.textContent=msg;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),1300)}
+  function local(points,rect){return points.map(p=>({x:p.x-rect.left,y:p.y-rect.top}))}
+  function simplify(points){const out=[];for(const p of points){const q=out[out.length-1];if(!q||Math.hypot(p.x-q.x,p.y-q.y)>6)out.push(p)}return out}
+  function recognizeV(p){p=simplify(p);if(p.length<5)return false;let li=0;for(let i=1;i<p.length;i++)if(p[i].y>p[li].y)li=i;const minX=Math.min(...p.map(x=>x.x)),maxX=Math.max(...p.map(x=>x.x)),minY=Math.min(...p.map(x=>x.y)),maxY=Math.max(...p.map(x=>x.y));if(maxX-minX<30||maxY-minY<25||li<1||li>p.length-2)return false;return p[0].x<p[li].x&&p[p.length-1].x>p[li].x&&p[li].y>minY+0.55*(maxY-minY)}
+  function recognizeCheck(p){p=simplify(p);if(p.length<5)return false;let li=0;for(let i=1;i<p.length;i++)if(p[i].y>p[li].y)li=i;const w=Math.max(...p.map(x=>x.x))-Math.min(...p.map(x=>x.x)),h=Math.max(...p.map(x=>x.y))-Math.min(...p.map(x=>x.y));if(w<28||h<22||li<1||li>p.length-2)return false;const first=p[0],low=p[li],last=p[p.length-1];return first.x<low.x&&last.x>low.x&&last.y<low.y-8}
+  function recognizeShare(p,rect){p=simplify(p);if(p.length<6)return false;const first=p[0],last=p[p.length-1];const w=Math.max(...p.map(x=>x.x))-Math.min(...p.map(x=>x.x)),h=Math.max(...p.map(x=>x.y))-Math.min(...p.map(x=>x.y));const lowest=Math.max(...p.map(x=>x.y));const highBeforeLeft=p.some(x=>x.y<first.y-55);return first.y>rect.height*.62&&w>70&&h>70&&highBeforeLeft&&last.x<first.x-45}
+  function openShare(){document.getElementById('share-menu').classList.add('open')}
+  function commitFreehand(){if(!freehand)return;const d=freehand;freehand=null;window.__howfarFreehandActive=false;const rect=d.target.getBoundingClientRect(),pts=local(d.points,rect);gesturePath.setAttribute('d','');if(d.kind==='share'&&recognizeShare(pts,rect)){openShare();return}if(d.kind==='symbol'){if(recognizeV(pts)){showToast('Saved to device ↓');return}if(recognizeCheck(pts)){doFlare(d.target.closest('.post,.reel'));return}}}
+  document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;if(e.target.closest?.('button,input,textarea,select,#share-menu'))return;const homeActive=document.getElementById('home').classList.contains('active'),reelsActive=document.getElementById('reels').classList.contains('active');if(!homeActive&&!reelsActive)return;const target=e.target.closest?.('.post,.reel');if(!target)return;const rect=target.getBoundingClientRect(),media=!!e.target.closest?.('.post-media,.reel-video'),startBottom=e.clientY>rect.top+rect.height*.62&&e.clientX>rect.left+rect.width*.18&&e.clientX<rect.left+rect.width*.82;const kind=media?'symbol':(startBottom?'share':null);if(kind){freehand={kind,target,points:[{x:e.clientX,y:e.clientY}]};window.__howfarFreehandActive=true}} ,true)
+  document.addEventListener('pointermove',e=>{if(!freehand)return;freehand.points.push({x:e.clientX,y:e.clientY});const rect=freehand.target.getBoundingClientRect(),pts=local(freehand.points,rect);gesturePath.setAttribute('d',pts.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' '));gesturePath.style.left=rect.left+'px';gesturePath.style.top=rect.top+'px';gesturePath.style.width=rect.width+'px';gesturePath.style.height=rect.height+'px';if(freehand.kind)e.preventDefault()},true)
+  document.addEventListener('pointerup',commitFreehand,true);document.addEventListener('pointercancel',()=>{freehand=null;window.__howfarFreehandActive=false;gesturePath.setAttribute('d','')},true)
+  document.getElementById('shareClose').addEventListener('click',()=>document.getElementById('share-menu').classList.remove('open'));document.getElementById('shareCopy').addEventListener('click',()=>{showToast('Link copied');document.getElementById('share-menu').classList.remove('open')});document.getElementById('shareSend').addEventListener('click',()=>{showToast('Share sheet ready');document.getElementById('share-menu').classList.remove('open')});document.getElementById('shareNearby').addEventListener('click',()=>{showToast('Nearby share ready');document.getElementById('share-menu').classList.remove('open')});
+
+  const originalSwitch=switchTab;switchTab=function(id){originalSwitch(id);if(id==='reels')startReelTimer();else stopReelTimer()};
+  setRailCollapsed(false);
+})();
+</script>
+</body>
+</html>
